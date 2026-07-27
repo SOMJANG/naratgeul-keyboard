@@ -1,0 +1,40 @@
+# Xcode 빌드 산출물
+build/
+build-sim/
+DerivedData/
+*.xcarchive
+*.ipa
+*.dSYM.zip
+*.dSYM
+
+# 사용자별 Xcode 상태 (창 위치, 최근 연 파일, 브레이크포인트 등)
+xcuserdata/
+*.xcuserstate
+*.xcscmblueprint
+*.xccheckout
+
+# 서명 관련. 실수로라도 올라가면 안 된다
+*.mobileprovision
+*.provisionprofile
+*.p12
+*.cer
+*.certSigningRequest
+
+# 의존성 관리자 (지금은 안 쓰지만 나중을 위해)
+.build/
+Packages/
+Pods/
+Carthage/Build/
+*.xcworkspace/xcuserdata/
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+Icon?
+._*
+
+# 편집기
+.idea/
+*.swp
+*~
