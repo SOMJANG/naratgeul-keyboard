@@ -18,7 +18,8 @@ struct KeyboardRootView: View {
                 switch layer {
                 case .hangul: hangulLayer
                 case .english: englishLayer
-                case .numbers: numberLayer
+                case .numbers: keypadLayer(rows: KeyboardLayout.numberRows)
+                case .symbols: keypadLayer(rows: KeyboardLayout.symbolRows)
                 case .emoji: emojiLayer
                 }
             }
@@ -44,7 +45,10 @@ struct KeyboardRootView: View {
         HStack(spacing: 0) {
             tab("한글", active: layer == .hangul) { perform(.switchLayer(.hangul)) }
             tab("영어", active: layer == .english) { perform(.switchLayer(.english)) }
-            tab("123", active: layer == .numbers) { perform(.switchLayer(.numbers)) }
+            // 기호는 숫자 레이어의 #+= 키로 들어가므로 탭에서는 한 칸을 같이 쓴다.
+            tab("123", active: layer == .numbers || layer == .symbols) {
+                perform(.switchLayer(.numbers))
+            }
             tab("이모지", active: layer == .emoji) { perform(.switchLayer(.emoji)) }
 
             Spacer(minLength: 0)
@@ -161,29 +165,35 @@ struct KeyboardRootView: View {
         }
     }
 
-    // MARK: - 숫자 레이어
+    // MARK: - 숫자 / 기호 레이어
 
-    private var numberLayer: some View {
+    /// 숫자와 기호는 한글 레이어와 똑같은 4×4 격자다.
+    ///
+    /// 왼쪽 3열만 레이어마다 다르고 오른쪽 열(⌫ · 간격 · ↵ · 한글/🌐)은 고정이다.
+    /// 나랏글은 키가 적은 대신 자리가 고정돼 있는 게 핵심이라, 숫자·기호로 넘어갔을 때만
+    /// 배열이 달라지면 그 이점이 사라진다.
+    private func keypadLayer(rows: [[KeyDefinition]]) -> some View {
         Group {
-            ForEach(Array(KeyboardLayout.numberRows.enumerated()), id: \.offset) { index, row in
-                HStack(spacing: 5) {
-                    ForEach(row, id: \.self) { symbol in
-                        KeyButton(
-                            definition: KeyDefinition(label: symbol, fontSize: 18, action: .insert(symbol)),
-                            onPress: perform
-                        )
+            ForEach(Array(rows.enumerated()), id: \.offset) { index, row in
+                HStack(spacing: KeyboardTheme.keyGap) {
+                    ForEach(row) { key in
+                        KeyButton(definition: key, onPress: perform)
                     }
-                    if index == 2 {
+
+                    if index < KeyboardLayout.keypadRightColumn.count {
                         KeyButton(
-                            definition: KeyDefinition(
-                                label: "⌫", style: .function, fontSize: 19, action: .backspace
-                            ),
+                            definition: KeyboardLayout.keypadRightColumn[index],
                             onPress: perform
                         )
+                    } else {
+                        // 한글 레이어의 [123 | 🌐] 와 같은 자리를 [한글 | 🌐] 로 쓴다.
+                        HStack(spacing: KeyboardTheme.keyGap) {
+                            KeyButton(definition: KeyboardLayout.toHangulKey, onPress: perform)
+                            globeKey
+                        }
                     }
                 }
             }
-            bottomUtilityRow
         }
     }
 
@@ -237,7 +247,7 @@ struct KeyboardRootView: View {
         }
     }
 
-    /// 영문·숫자 레이어 공통 하단 행.
+    /// 영문 레이어 하단 행.
     private var bottomUtilityRow: some View {
         HStack(spacing: KeyboardTheme.keyGap) {
             KeyButton(
@@ -304,7 +314,7 @@ struct KeyboardRootView: View {
         switch layer {
         case .hangul: layer = .english
         case .english: layer = .emoji
-        case .emoji, .numbers: layer = .hangul
+        case .emoji, .numbers, .symbols: layer = .hangul
         }
         isShifted = false
     }

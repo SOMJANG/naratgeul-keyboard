@@ -138,6 +138,9 @@ final class KeyboardViewController: UIInputViewController {
         case .insert(let text):
             run(.literal(text))
 
+        case .cycleSymbol(let options):
+            run(.cycle(options))
+
         case .backspace:
             run(.backspace)
 

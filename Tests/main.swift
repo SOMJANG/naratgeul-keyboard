@@ -108,6 +108,22 @@ check("가나 → 지우기 → 가ㄴ", [G, AEO, N, AEO, BS], "가ㄴ")
 print("\n── 확정 후 획 추가 ──")
 check("가 (확정) + 획 → 갸", [G, AEO, SP, BS, ST], "갸")
 
+print("\n── 기호 묶음 키 ──")
+let PAREN = NaratgeulKey.cycle(["(", "-", ")"])
+let WON = NaratgeulKey.cycle(["₩", "$", "¥"])
+let DOT = NaratgeulKey.cycle([".", ",", "?", "!"])
+
+check("한 번 누르면 첫 기호", [PAREN], "(")
+check("두 번 누르면 다음 기호", [PAREN, PAREN], "-")
+check("세 번 누르면 마지막 기호", [PAREN, PAREN, PAREN], ")")
+check("네 번 누르면 처음으로 돌아온다", [PAREN, PAREN, PAREN, PAREN], "(")
+check("네 개 묶음도 돈다", [DOT, DOT, DOT, DOT, DOT], ".")
+check("다른 기호 키가 오면 새로 시작", [PAREN, WON], "(₩")
+check("사이에 다른 키가 끼면 새로 시작", [PAREN, SP, PAREN], "( (")
+check("조합 중이던 한글은 확정된다", [G, AEO, PAREN], "가(")
+check("바꾼 뒤에도 한글은 이어서 조합", [PAREN, PAREN, G, AEO], "-가")
+check("백스페이스로 지운다", [PAREN, PAREN, BS], "")
+
 print("\n── 문장 ──")
 check(
     "안녕하세요",

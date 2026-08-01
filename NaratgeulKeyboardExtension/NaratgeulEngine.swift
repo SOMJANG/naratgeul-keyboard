@@ -33,6 +33,8 @@ enum NaratgeulKey: Equatable {
     case newline
     /// 한글 조합과 무관한 문자 (영문, 숫자, 기호)
     case literal(String)
+    /// 기호가 여러 개 묶인 키. 같은 키를 다시 누르면 다음 기호로 바뀐다.
+    case cycle([String])
 }
 
 /// 나랏글 한글 오토마타.
@@ -95,6 +97,9 @@ final class NaratgeulEngine {
     private var vowelSeq: [Character] = []
     private var lastKey: NaratgeulKey?
 
+    /// 기호 묶음 키에서 지금 몇 번째 기호를 넣어 뒀는지.
+    private var cycleIndex = 0
+
     /// 이번 입력에서 확정된 글자들
     private var pendingCommit = ""
 
@@ -136,6 +141,8 @@ final class NaratgeulEngine {
         case .literal(let text):
             flush()
             pendingCommit += text
+        case .cycle(let options):
+            deleteCount = inputCycle(options, contextBefore: contextBefore)
         }
 
         lastKey = key
@@ -149,6 +156,7 @@ final class NaratgeulEngine {
         jong = nil
         vowelSeq = []
         lastKey = nil
+        cycleIndex = 0
         pendingCommit = ""
     }
 
@@ -407,6 +415,33 @@ final class NaratgeulEngine {
             vowelSeq = []
         }
         return 1
+    }
+
+    // MARK: - 기호 묶음
+
+    /// 기호가 여러 개 묶인 키 (`(-)`, `₩$¥` 처럼).
+    ///
+    /// 나랏글의 ㅏㅓ·ㅗㅜ 키와 같은 방식이다. 같은 키를 연달아 누르면
+    /// 방금 넣은 기호를 지우고 다음 기호로 갈아 끼운다.
+    /// 다른 키가 한 번이라도 끼어들면 `lastKey` 가 달라져 새로 시작한다.
+    /// - Returns: 지워야 할 확정 글자 수
+    private func inputCycle(_ options: [String], contextBefore: String?) -> Int {
+        guard !options.isEmpty else { return 0 }
+
+        // 방금 넣은 기호가 아직 커서 바로 앞에 그대로 있어야 갈아 끼울 수 있다.
+        // 사용자가 화면을 탭해 커서를 옮겼으면 엉뚱한 글자를 지우게 된다.
+        // 보안 입력 필드에서는 앞 문맥을 못 읽으므로(nil) 상태를 그대로 믿는다.
+        if lastKey == .cycle(options),
+           contextBefore.map({ $0.hasSuffix(options[cycleIndex]) }) ?? true {
+            cycleIndex = (cycleIndex + 1) % options.count
+            pendingCommit += options[cycleIndex]
+            return 1
+        }
+
+        flush()
+        cycleIndex = 0
+        pendingCommit += options[0]
+        return 0
     }
 
     // MARK: - 확정

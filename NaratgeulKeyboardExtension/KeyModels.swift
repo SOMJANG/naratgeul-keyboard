@@ -6,6 +6,8 @@ enum KeyAction: Equatable {
     case hangul(NaratgeulKey)
     /// 조합을 확정하고 문자열을 그대로 삽입
     case insert(String)
+    /// 기호 묶음 키. 같은 키를 다시 누르면 다음 기호로 바뀐다
+    case cycleSymbol([String])
     case backspace
     case space
     case newline
@@ -43,6 +45,7 @@ enum KeyboardLayer: Equatable {
     case hangul
     case english
     case numbers
+    case symbols
     case emoji
 }
 
@@ -94,10 +97,73 @@ enum KeyboardLayout {
 
     // MARK: - 숫자 / 기호
 
-    static let numberRows: [[String]] = [
-        ["1", "2", "3", "4", "5", "6", "7", "8", "9", "0"],
-        ["-", "/", ":", ";", "(", ")", "₩", "&", "@"],
-        [".", ",", "?", "!", "'", "\"", "%"],
+    /// 기호가 여러 개 묶인 키.
+    ///
+    /// 나랏글의 ㅏㅓ·ㅗㅜ 키와 같은 방식이다. 같은 키를 다시 누르면 방금 넣은 기호가
+    /// 다음 기호로 바뀐다. 라벨은 들어 있는 순서 그대로 이어 붙여 보여 준다.
+    static func cycled(_ options: [String]) -> KeyDefinition {
+        KeyDefinition(
+            label: options.joined(),
+            fontSize: options.count >= 4 ? 13 : 15,
+            action: .cycleSymbol(options)
+        )
+    }
+
+    /// 한글로 돌아가는 키. 숫자·기호 레이어의 오른쪽 아래에서 지구본과 자리를 나눈다.
+    static let toHangulKey = KeyDefinition(
+        label: "한글", style: .function, fontSize: 12, action: .switchLayer(.hangul)
+    )
+
+    /// 숫자·기호 레이어 오른쪽 열.
+    ///
+    /// 한글 레이어(⌫ · 간격 · ↵)와 같은 자리를 지킨다.
+    /// 레이어를 오가도 손이 기억하는 위치가 흐트러지지 않게 하려는 것이다.
+    static let keypadRightColumn: [KeyDefinition] = [
+        KeyDefinition(label: "⌫", style: .function, fontSize: 19, action: .backspace),
+        KeyDefinition(label: "간격", style: .function, fontSize: 14, action: .space),
+        KeyDefinition(label: "↵", style: .function, fontSize: 17, action: .newline),
+    ]
+
+    /// 숫자 레이어 왼쪽 3열. 전화기 자판과 같은 배열이다.
+    ///
+    /// ```
+    /// 1     2   3    ⌫
+    /// 4     5   6    간격
+    /// 7     8   9    ↵
+    /// .,?!  0   #+=  한글 / 🌐
+    /// ```
+    static let numberRows: [[KeyDefinition]] = [
+        digitRow("1", "2", "3"),
+        digitRow("4", "5", "6"),
+        digitRow("7", "8", "9"),
+        [
+            cycled([".", ",", "?", "!"]),
+            KeyDefinition(label: "0", action: .insert("0")),
+            KeyDefinition(label: "#+=", style: .function, fontSize: 14, action: .switchLayer(.symbols)),
+        ],
+    ]
+
+    private static func digitRow(_ digits: String...) -> [KeyDefinition] {
+        digits.map { KeyDefinition(label: $0, action: .insert($0)) }
+    }
+
+    /// 기호 레이어 왼쪽 3열. 한 키에 서너 개씩 묶여 있고 다시 눌러 돌린다.
+    ///
+    /// ```
+    /// (-)   ₩$¥  ^%#  ⌫
+    /// {*}   +×÷  <=>  간격
+    /// [:]   "';  /\|  ↵
+    /// .,?!  ~…•  123  한글 / 🌐
+    /// ```
+    static let symbolRows: [[KeyDefinition]] = [
+        [cycled(["(", "-", ")"]), cycled(["₩", "$", "¥"]), cycled(["^", "%", "#"])],
+        [cycled(["{", "*", "}"]), cycled(["+", "×", "÷"]), cycled(["<", "=", ">"])],
+        [cycled(["[", ":", "]"]), cycled(["\"", "'", ";"]), cycled(["/", "\\", "|"])],
+        [
+            cycled([".", ",", "?", "!"]),
+            cycled(["~", "…", "•"]),
+            KeyDefinition(label: "123", style: .function, fontSize: 14, action: .switchLayer(.numbers)),
+        ],
     ]
 
     // MARK: - 이모지
