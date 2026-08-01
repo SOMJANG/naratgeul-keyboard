@@ -18,8 +18,8 @@ struct KeyboardRootView: View {
                 switch layer {
                 case .hangul: hangulLayer
                 case .english: englishLayer
-                case .numbers: keypadLayer(rows: KeyboardLayout.numberRows)
-                case .symbols: keypadLayer(rows: KeyboardLayout.symbolRows)
+                case .numbers: keypadLayer(KeyboardLayout.numberKeypad)
+                case .symbols: keypadLayer(KeyboardLayout.symbolKeypad)
                 case .emoji: emojiLayer
                 }
             }
@@ -98,7 +98,7 @@ struct KeyboardRootView: View {
     private var hangulLayer: some View {
         Group {
             ForEach(Array(KeyboardLayout.hangulRows.enumerated()), id: \.offset) { _, row in
-                HStack(spacing: KeyboardTheme.keyGap) {
+                KeyRow {
                     ForEach(row) { key in
                         KeyButton(definition: key, onPress: perform)
                     }
@@ -106,11 +106,10 @@ struct KeyboardRootView: View {
             }
 
             // 마지막 행: 획 · ㅡ · 쌍 · [123 | 지구본]
-            HStack(spacing: KeyboardTheme.keyGap) {
+            KeyRow {
                 ForEach(KeyboardLayout.hangulBottomRow) { key in
                     KeyButton(definition: key, onPress: perform)
                 }
-
                 HStack(spacing: KeyboardTheme.keyGap) {
                     KeyButton(
                         definition: KeyDefinition(
@@ -119,8 +118,9 @@ struct KeyboardRootView: View {
                         ),
                         onPress: perform
                     )
-                    globeKey
+                    globeKey()
                 }
+                .keyWidthRatio(KeyboardTheme.functionColumnRatio)
             }
         }
     }
@@ -130,7 +130,7 @@ struct KeyboardRootView: View {
     private var englishLayer: some View {
         Group {
             ForEach(Array(KeyboardLayout.englishRows.enumerated()), id: \.offset) { index, row in
-                HStack(spacing: 5) {
+                KeyRow(spacing: 5) {
                     if index == 2 {
                         KeyButton(
                             definition: KeyDefinition(
@@ -167,34 +167,47 @@ struct KeyboardRootView: View {
 
     // MARK: - 숫자 / 기호 레이어
 
-    /// 숫자와 기호는 한글 레이어와 똑같은 4×4 격자다.
+    /// 숫자와 기호는 한글 레이어와 같은 4×4 격자다.
     ///
-    /// 왼쪽 3열만 레이어마다 다르고 오른쪽 열(⌫ · 간격 · ↵ · 한글/🌐)은 고정이다.
-    /// 나랏글은 키가 적은 대신 자리가 고정돼 있는 게 핵심이라, 숫자·기호로 넘어갔을 때만
-    /// 배열이 달라지면 그 이점이 사라진다.
-    private func keypadLayer(rows: [[KeyDefinition]]) -> some View {
+    /// 다만 오른쪽 기능 열이 한글 쪽과 다르다. 간격이 여기서는 격자 안쪽
+    /// 마지막 행 셋째 칸으로 내려가고, 그 자리를 .,?! 가 받는다.
+    /// 마지막 행 왼쪽 칸은 전환 키와 한글 키가 반씩 나눠 쓴다.
+    private func keypadLayer(_ keypad: KeyboardLayout.Keypad) -> some View {
         Group {
-            ForEach(Array(rows.enumerated()), id: \.offset) { index, row in
-                HStack(spacing: KeyboardTheme.keyGap) {
+            ForEach(Array(keypad.rows.enumerated()), id: \.offset) { index, row in
+                KeyRow {
                     ForEach(row) { key in
                         KeyButton(definition: key, onPress: perform)
                     }
-
-                    if index < KeyboardLayout.keypadRightColumn.count {
-                        KeyButton(
-                            definition: KeyboardLayout.keypadRightColumn[index],
-                            onPress: perform
-                        )
-                    } else {
-                        // 한글 레이어의 [123 | 🌐] 와 같은 자리를 [한글 | 🌐] 로 쓴다.
-                        HStack(spacing: KeyboardTheme.keyGap) {
-                            KeyButton(definition: KeyboardLayout.toHangulKey, onPress: perform)
-                            globeKey
-                        }
-                    }
+                    KeyButton(
+                        definition: KeyboardLayout.keypadRightColumn[index],
+                        onPress: perform
+                    )
                 }
             }
+
+            // 마지막 행: [#+= | 한글] · 0 · 간격 · 🌐
+            KeyRow {
+                splitSlot(keypad.switchKey, KeyboardLayout.toHangulKey, ratio: 1)
+                KeyButton(definition: keypad.center, onPress: perform)
+                KeyButton(definition: KeyboardLayout.keypadSpaceKey, onPress: perform)
+                globeKey(ratio: KeyboardTheme.keypadFunctionColumnRatio)
+            }
         }
+    }
+
+    /// 한 칸을 작은 키 둘로 나눠 쓰는 자리.
+    ///
+    /// 안쪽 두 키는 반씩 나눠 갖고, 칸 전체 폭은 `ratio` 를 따른다.
+    /// 안쪽은 `HStack` 이라 키가 들고 있는 `widthRatio` 는 무시된다.
+    private func splitSlot(
+        _ left: KeyDefinition, _ right: KeyDefinition, ratio: CGFloat
+    ) -> some View {
+        HStack(spacing: KeyboardTheme.keyGap) {
+            KeyButton(definition: left, onPress: perform)
+            KeyButton(definition: right, onPress: perform)
+        }
+        .keyWidthRatio(ratio)
     }
 
     // MARK: - 이모지 레이어
@@ -241,7 +254,7 @@ struct KeyboardRootView: View {
                     ),
                     onPress: perform
                 )
-                globeKey
+                globeKey()
             }
             .frame(height: KeyboardTheme.keyHeight)
         }
@@ -266,7 +279,7 @@ struct KeyboardRootView: View {
                 definition: KeyDefinition(label: "↵", style: .function, fontSize: 17, action: .newline),
                 onPress: perform
             )
-            globeKey
+            globeKey()
         }
     }
 
@@ -274,11 +287,11 @@ struct KeyboardRootView: View {
     ///
     /// 모든 레이어의 오른쪽 끝 같은 자리에 둔다.
     /// 자리가 고정돼 있어야 "한 번 눌러 영어, 한 번 더 눌러 이모지" 가 성립한다.
-    private var globeKey: some View {
+    private func globeKey(ratio: CGFloat = 1) -> some View {
         KeyButton(
             definition: KeyDefinition(
                 label: "영어·이모지 전환", symbol: "globe", style: .function,
-                fontSize: 17, action: .cycleLayer
+                widthRatio: ratio, fontSize: 17, action: .cycleLayer
             ),
             onPress: perform
         )

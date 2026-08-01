@@ -73,6 +73,7 @@ struct KeyButton: View {
         .onDisappear(perform: stopRepeating)
         .accessibilityLabel(definition.label)
         .accessibilityAddTraits(.isKeyboardKey)
+        .keyWidthRatio(definition.widthRatio)
     }
 
     // MARK: - 누름 처리
@@ -113,6 +114,71 @@ struct KeyButton: View {
     private func stopRepeating() {
         repeatTask?.cancel()
         repeatTask = nil
+    }
+}
+
+/// 키 한 행. 각 키가 `widthRatio` 에 비례해 가로를 나눠 갖는다.
+///
+/// `HStack` 에 `.frame(maxWidth: .infinity)` 를 얹으면 남는 자리를 똑같이 쪼개기만 해서
+/// "이 키는 옆 키의 0.75배" 를 표현할 수 없다. 키보드 전체에 공통 단위 폭을 두는 방법도
+/// 맞지 않는다. 행마다 비율의 합이 다르기 때문이다 (영문 셋째 줄은 1.4 + 7 + 1.4).
+/// 그래서 행 단위로 직접 나눈다.
+struct KeyRow: Layout {
+    var spacing: CGFloat = KeyboardTheme.keyGap
+
+    func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
+        CGSize(
+            width: finite(proposal.width) ?? 0,
+            height: finite(proposal.height)
+                ?? subviews.map { $0.sizeThatFits(.unspecified).height }.max()
+                ?? KeyboardTheme.keyHeight
+        )
+    }
+
+    func placeSubviews(
+        in bounds: CGRect,
+        proposal: ProposedViewSize,
+        subviews: Subviews,
+        cache: inout ()
+    ) {
+        guard !subviews.isEmpty else { return }
+
+        let ratios = subviews.map { max(0, $0[KeyWidthRatioKey.self]) }
+        let total = ratios.reduce(0, +)
+        guard total > 0 else { return }
+
+        let gaps = spacing * CGFloat(subviews.count - 1)
+        let unit = max(0, bounds.width - gaps) / total
+
+        var x = bounds.minX
+        for (index, subview) in subviews.enumerated() {
+            let width = unit * ratios[index]
+            subview.place(
+                at: CGPoint(x: x, y: bounds.minY),
+                proposal: ProposedViewSize(width: width, height: bounds.height)
+            )
+            x += width + spacing
+        }
+    }
+
+    /// 제안 값이 없거나 무한대면 쓸 수 없다.
+    private func finite(_ value: CGFloat?) -> CGFloat? {
+        guard let value, value.isFinite else { return nil }
+        return value
+    }
+}
+
+/// 키가 행에서 차지할 가로 비율. `KeyRow` 가 읽는다.
+private struct KeyWidthRatioKey: LayoutValueKey {
+    static let defaultValue: CGFloat = 1
+}
+
+extension View {
+    /// 이 뷰가 `KeyRow` 안에서 차지할 가로 비율.
+    ///
+    /// `KeyRow` 가 아닌 곳에서는 아무 영향이 없다.
+    func keyWidthRatio(_ ratio: CGFloat) -> some View {
+        layoutValue(key: KeyWidthRatioKey.self, value: ratio)
     }
 }
 

@@ -73,6 +73,18 @@ enum KeyboardTheme {
     static let sidePadding: CGFloat = 6
     static let tabBarHeight: CGFloat = 32
 
+    /// 한글 레이어 오른쪽 기능 열(⌫ · 간격 · ↵ · 123/🌐)의 가로 비율.
+    ///
+    /// 나랏글 원래 배열이 기능 열을 글자 열보다 좁게 잡는다.
+    /// 글자 키를 넓게 두는 쪽이 오타가 덜 나기도 한다.
+    static let functionColumnRatio: CGFloat = 0.75
+
+    /// 숫자·기호 레이어 오른쪽 기능 열의 가로 비율.
+    ///
+    /// 한글 쪽보다 더 좁다. 여기 기능 열에는 "간격" 같은 두 글자 라벨이 없고
+    /// ⌫ · ↵ · .,?! · 🌐 만 들어가서 원래 배열도 절반 가까이 줄여 잡는다.
+    static let keypadFunctionColumnRatio: CGFloat = 0.55
+
     /// 탭바 + 4행 + 여백.
     ///
     /// `compact` 는 세로 크기 등급이 compact 인 경우, 즉 아이폰 가로 모드다.

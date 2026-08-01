@@ -64,21 +64,37 @@ enum KeyboardLayout {
             KeyDefinition(label: "ㄱ", number: "1", action: .hangul(.consonant("ㄱ"))),
             KeyDefinition(label: "ㄴ", number: "2", action: .hangul(.consonant("ㄴ"))),
             KeyDefinition(label: "ㅏㅓ", number: "3", fontSize: 19, action: .hangul(.aeo)),
-            KeyDefinition(label: "⌫", style: .function, fontSize: 19, action: .backspace),
+            functionColumn(label: "⌫", fontSize: 19, action: .backspace),
         ],
         [
             KeyDefinition(label: "ㄹ", number: "4", action: .hangul(.consonant("ㄹ"))),
             KeyDefinition(label: "ㅁ", number: "5", action: .hangul(.consonant("ㅁ"))),
             KeyDefinition(label: "ㅗㅜ", number: "6", fontSize: 19, action: .hangul(.ou)),
-            KeyDefinition(label: "간격", style: .function, fontSize: 14, action: .space),
+            functionColumn(label: "간격", fontSize: 14, action: .space),
         ],
         [
             KeyDefinition(label: "ㅅ", number: "7", action: .hangul(.consonant("ㅅ"))),
             KeyDefinition(label: "ㅇ", number: "8", action: .hangul(.consonant("ㅇ"))),
             KeyDefinition(label: "ㅣ", number: "9", action: .hangul(.i)),
-            KeyDefinition(label: "↵", style: .function, fontSize: 17, action: .newline),
+            functionColumn(label: "↵", fontSize: 17, action: .newline),
         ],
     ]
+
+    /// 오른쪽 기능 열에 놓이는 키. 글자 열보다 좁다.
+    static func functionColumn(
+        label: String,
+        fontSize: CGFloat,
+        ratio: CGFloat = KeyboardTheme.functionColumnRatio,
+        action: KeyAction
+    ) -> KeyDefinition {
+        KeyDefinition(
+            label: label,
+            style: .function,
+            widthRatio: ratio,
+            fontSize: fontSize,
+            action: action
+        )
+    }
 
     /// 마지막 행의 왼쪽 3개 키 (획 / ㅡ / 쌍)
     static let hangulBottomRow: [KeyDefinition] = [
@@ -101,70 +117,103 @@ enum KeyboardLayout {
     ///
     /// 나랏글의 ㅏㅓ·ㅗㅜ 키와 같은 방식이다. 같은 키를 다시 누르면 방금 넣은 기호가
     /// 다음 기호로 바뀐다. 라벨은 들어 있는 순서 그대로 이어 붙여 보여 준다.
-    static func cycled(_ options: [String]) -> KeyDefinition {
+    static func cycled(
+        _ options: [String],
+        style: KeyStyle = .character,
+        ratio: CGFloat = 1
+    ) -> KeyDefinition {
         KeyDefinition(
             label: options.joined(),
-            fontSize: options.count >= 4 ? 13 : 15,
+            style: style,
+            widthRatio: ratio,
+            // 좁은 기능 열에 들어가는 .,?! 는 더 줄여야 네 글자가 다 들어간다.
+            fontSize: options.count >= 4 ? (ratio < 1 ? 11 : 13) : 15,
             action: .cycleSymbol(options)
         )
     }
 
-    /// 한글로 돌아가는 키. 숫자·기호 레이어의 오른쪽 아래에서 지구본과 자리를 나눈다.
+    /// 한글로 돌아가는 키. 숫자·기호 레이어 마지막 행 왼쪽 칸을 전환 키와 나눠 쓴다.
     static let toHangulKey = KeyDefinition(
         label: "한글", style: .function, fontSize: 12, action: .switchLayer(.hangul)
     )
 
-    /// 숫자·기호 레이어 오른쪽 열.
+    /// 숫자·기호 레이어 오른쪽 기능 열 (위 3칸).
     ///
-    /// 한글 레이어(⌫ · 간격 · ↵)와 같은 자리를 지킨다.
-    /// 레이어를 오가도 손이 기억하는 위치가 흐트러지지 않게 하려는 것이다.
+    /// 한글 레이어와 달리 간격이 여기 없다. 간격은 마지막 행 셋째 칸으로 내려가고
+    /// 그 자리를 .,?! 가 받는다. 원래 나랏글 배열이 그렇게 잡혀 있다.
     static let keypadRightColumn: [KeyDefinition] = [
-        KeyDefinition(label: "⌫", style: .function, fontSize: 19, action: .backspace),
-        KeyDefinition(label: "간격", style: .function, fontSize: 14, action: .space),
-        KeyDefinition(label: "↵", style: .function, fontSize: 17, action: .newline),
+        keypadFunction(label: "⌫", fontSize: 19, action: .backspace),
+        keypadFunction(label: "↵", fontSize: 17, action: .newline),
+        cycled([".", ",", "?", "!"], style: .function, ratio: KeyboardTheme.keypadFunctionColumnRatio),
     ]
 
-    /// 숫자 레이어 왼쪽 3열. 전화기 자판과 같은 배열이다.
+    /// 숫자·기호 레이어 마지막 행 셋째 칸. 글자 열 폭을 그대로 쓰는 넓은 간격 키다.
+    static let keypadSpaceKey = KeyDefinition(
+        label: "간격", style: .function, fontSize: 14, action: .space
+    )
+
+    private static func keypadFunction(
+        label: String, fontSize: CGFloat, action: KeyAction
+    ) -> KeyDefinition {
+        functionColumn(
+            label: label,
+            fontSize: fontSize,
+            ratio: KeyboardTheme.keypadFunctionColumnRatio,
+            action: action
+        )
+    }
+
+    /// 숫자·기호 레이어 한 벌.
+    ///
+    /// 위 3행은 글자 열 3칸씩이고, 마지막 행만 모양이 다르다.
+    /// 왼쪽 칸을 전환 키와 한글 키가 반씩 나눠 쓰고 셋째 칸이 간격이다.
+    struct Keypad {
+        let rows: [[KeyDefinition]]
+        /// 마지막 행 왼쪽 칸의 전환 키 (#+= 또는 123)
+        let switchKey: KeyDefinition
+        /// 마지막 행 가운데 칸 (0 또는 ~…•)
+        let center: KeyDefinition
+    }
+
+    /// 숫자 레이어. 전화기 자판과 같은 배열이다.
     ///
     /// ```
-    /// 1     2   3    ⌫
-    /// 4     5   6    간격
-    /// 7     8   9    ↵
-    /// .,?!  0   #+=  한글 / 🌐
+    /// 1        2   3    ⌫
+    /// 4        5   6    ↵
+    /// 7        8   9    .,?!
+    /// #+= 한글  0   간격  🌐
     /// ```
-    static let numberRows: [[KeyDefinition]] = [
-        digitRow("1", "2", "3"),
-        digitRow("4", "5", "6"),
-        digitRow("7", "8", "9"),
-        [
-            cycled([".", ",", "?", "!"]),
-            KeyDefinition(label: "0", action: .insert("0")),
-            KeyDefinition(label: "#+=", style: .function, fontSize: 14, action: .switchLayer(.symbols)),
-        ],
-    ]
+    static let numberKeypad = Keypad(
+        rows: [digitRow("1", "2", "3"), digitRow("4", "5", "6"), digitRow("7", "8", "9")],
+        switchKey: KeyDefinition(
+            label: "#+=", style: .function, fontSize: 12, action: .switchLayer(.symbols)
+        ),
+        center: KeyDefinition(label: "0", action: .insert("0"))
+    )
 
     private static func digitRow(_ digits: String...) -> [KeyDefinition] {
         digits.map { KeyDefinition(label: $0, action: .insert($0)) }
     }
 
-    /// 기호 레이어 왼쪽 3열. 한 키에 서너 개씩 묶여 있고 다시 눌러 돌린다.
+    /// 기호 레이어. 한 키에 서너 개씩 묶여 있고 다시 눌러 돌린다.
     ///
     /// ```
-    /// (-)   ₩$¥  ^%#  ⌫
-    /// {*}   +×÷  <=>  간격
-    /// [:]   "';  /\|  ↵
-    /// .,?!  ~…•  123  한글 / 🌐
+    /// (-)      ₩$¥  ^%#  ⌫
+    /// {*}      +×÷  <=>  ↵
+    /// [:]      "';  /\|  .,?!
+    /// 123 한글  ~…•  간격  🌐
     /// ```
-    static let symbolRows: [[KeyDefinition]] = [
-        [cycled(["(", "-", ")"]), cycled(["₩", "$", "¥"]), cycled(["^", "%", "#"])],
-        [cycled(["{", "*", "}"]), cycled(["+", "×", "÷"]), cycled(["<", "=", ">"])],
-        [cycled(["[", ":", "]"]), cycled(["\"", "'", ";"]), cycled(["/", "\\", "|"])],
-        [
-            cycled([".", ",", "?", "!"]),
-            cycled(["~", "…", "•"]),
-            KeyDefinition(label: "123", style: .function, fontSize: 14, action: .switchLayer(.numbers)),
+    static let symbolKeypad = Keypad(
+        rows: [
+            [cycled(["(", "-", ")"]), cycled(["₩", "$", "¥"]), cycled(["^", "%", "#"])],
+            [cycled(["{", "*", "}"]), cycled(["+", "×", "÷"]), cycled(["<", "=", ">"])],
+            [cycled(["[", ":", "]"]), cycled(["\"", "'", ";"]), cycled(["/", "\\", "|"])],
         ],
-    ]
+        switchKey: KeyDefinition(
+            label: "123", style: .function, fontSize: 12, action: .switchLayer(.numbers)
+        ),
+        center: cycled(["~", "…", "•"])
+    )
 
     // MARK: - 이모지
 
