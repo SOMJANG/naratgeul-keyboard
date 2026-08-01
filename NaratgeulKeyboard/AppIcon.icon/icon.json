@@ -1,38 +1,50 @@
 {
   "fill" : {
-    "automatic-gradient" : "extended-srgb:0.87451,0.80392,0.65098,1.00000"
+    "automatic-gradient" : "extended-srgb:0.86667,0.74510,0.55294,1.00000"
   },
   "groups" : [
     {
       "layers" : [
         {
+          "image-name" : "paper.png",
+          "name" : "한지 질감"
+        }
+      ],
+      "translucency" : {
+        "enabled" : true,
+        "value" : 0.12
+      }
+    },
+    {
+      "layers" : [
+        {
           "image-name" : "frame.png",
-          "name" : "변란"
+          "name" : "목판 변란"
         }
       ],
       "shadow" : {
         "kind" : "neutral",
-        "opacity" : 0.35
+        "opacity" : 0.32
       },
       "translucency" : {
         "enabled" : true,
-        "value" : 0.5
+        "value" : 0.18
       }
     },
     {
       "layers" : [
         {
           "image-name" : "na.png",
-          "name" : "나"
+          "name" : "농묵 나"
         }
       ],
       "shadow" : {
         "kind" : "neutral",
-        "opacity" : 0.5
+        "opacity" : 0.42
       },
       "translucency" : {
         "enabled" : true,
-        "value" : 0.5
+        "value" : 0.10
       }
     }
   ],
