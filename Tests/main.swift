@@ -133,5 +133,50 @@ check(
 check("한글", [O, ST, AEO, N, G, EU, R], "한글")
 check("나랏글", [N, AEO, R, AEO, S, G, EU, R], "나랏글")
 
+print("\n── ㄼ · ㄿ 받침 (겹받침에 획 더하기) ──")
+// ㄹ 뒤에 ㅁ 을 누르면 곧바로 ㄻ 으로 붙어 버려서, 획을 받을 ㅁ 이 남지 않는다.
+// 그래서 겹받침 자체에 획이 먹어야 이 두 받침을 칠 수 있다.
+check("넓 (ㄻ + 획)", [N, AEO, AEO, R, M, ST], "넓")
+check("읊 (ㄻ + 획 두 번)", [O, EU, R, M, ST, ST], "읊")
+check("삶 (ㄻ 은 그대로)", [S, AEO, R, M], "삶")
+check("넓다", [N, AEO, AEO, R, M, ST, N, ST, AEO], "넓다")
+check("확정된 글자에도 먹는다", [S, AEO, R, M, SP, BS, ST], "삷")
+
+print("\n── 키 순서 되짚기 ──")
+// KeySequence 는 엔진 규칙을 손으로 뒤집어 놓은 표라서 조용히 어긋날 수 있다.
+// 여기서 내놓은 순서를 다시 엔진에 넣어 원래 글자가 나오는지 확인한다.
+func checkRoundTrip(_ text: String) {
+    guard let keys = KeySequence.keys(for: text) else {
+        failures += 1
+        print("✗ 키 순서를 만들지 못함: \(text)")
+        return
+    }
+    let doc = FakeDocument()
+    doc.press(keys)
+    if doc.text != text {
+        failures += 1
+        print("✗ \(text) → 눌러 보니 \(doc.text)  (\(keys.map(\.practiceLabel).joined(separator: " ")))")
+    }
+}
+
+for item in PracticeCourse.allItems { checkRoundTrip(item.text) }
+print("연습 문제 \(PracticeCourse.allItems.count)개 확인")
+
+// 한글 음절 전체. 하나라도 못 치면 그 받침이나 모음에 길이 없다는 뜻이다.
+var sweepFailures = 0
+for code in 0xAC00 ... 0xD7A3 {
+    let syllable = String(UnicodeScalar(code)!)
+    guard let keys = KeySequence.keys(for: syllable) else { sweepFailures += 1; continue }
+    let doc = FakeDocument()
+    doc.press(keys)
+    if doc.text != syllable { sweepFailures += 1 }
+}
+if sweepFailures > 0 {
+    failures += 1
+    print("✗ 한글 11172자 중 \(sweepFailures)자를 칠 수 없음")
+} else {
+    print("한글 11172자 전부 확인")
+}
+
 print("\n실패 \(failures)건")
 exit(failures == 0 ? 0 : 1)

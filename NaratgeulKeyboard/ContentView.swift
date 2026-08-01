@@ -27,6 +27,26 @@ struct ContentView: View {
                     Text("전체 접근 권한은 키 눌림 진동에만 씁니다. 안 켜도 입력은 모두 됩니다. 이 키보드는 네트워크를 쓰지 않고 입력 내용을 밖으로 내보내지 않습니다.")
                 }
 
+                Section {
+                    NavigationLink {
+                        PracticeView()
+                    } label: {
+                        HStack(spacing: 12) {
+                            Image(systemName: "keyboard.badge.ellipsis")
+                                .font(.title2)
+                                .foregroundStyle(.tint)
+                                .frame(width: 30)
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text("연습 모드").font(.body.weight(.medium))
+                                Text("자음 자리부터 문장까지 차례로 익힙니다")
+                                    .font(.footnote)
+                                    .foregroundStyle(.secondary)
+                            }
+                        }
+                        .padding(.vertical, 4)
+                    }
+                }
+
                 Section("시험 입력") {
                     TextField("여기에 입력해 보세요", text: $testText, axis: .vertical)
                         .lineLimit(3 ... 6)

@@ -18,7 +18,13 @@
 		AC0000000000000000000014 /* KeyModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB0000000000000000000014 /* KeyModels.swift */; };
 		AC0000000000000000000015 /* KeyButton.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB0000000000000000000015 /* KeyButton.swift */; };
 		AC0000000000000000000017 /* KeyboardTheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB0000000000000000000017 /* KeyboardTheme.swift */; };
+		AC0000000000000000000018 /* KeySequence.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB0000000000000000000018 /* KeySequence.swift */; };
 		AC0000000000000000000031 /* AppIcon.icon in Resources */ = {isa = PBXBuildFile; fileRef = AB0000000000000000000031 /* AppIcon.icon */; };
+		AC0000000000000000000041 /* PracticeItems.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB0000000000000000000041 /* PracticeItems.swift */; };
+		AC0000000000000000000042 /* PracticeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB0000000000000000000042 /* PracticeView.swift */; };
+		AC0000000000000000000043 /* NaratgeulEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB0000000000000000000011 /* NaratgeulEngine.swift */; };
+		AC0000000000000000000044 /* Hangul.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB0000000000000000000012 /* Hangul.swift */; };
+		AC0000000000000000000045 /* KeySequence.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB0000000000000000000018 /* KeySequence.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -60,7 +66,10 @@
 		AB0000000000000000000015 /* KeyButton.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeyButton.swift; sourceTree = "<group>"; };
 		AB0000000000000000000016 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		AB0000000000000000000017 /* KeyboardTheme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeyboardTheme.swift; sourceTree = "<group>"; };
+		AB0000000000000000000018 /* KeySequence.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeySequence.swift; sourceTree = "<group>"; };
 		AB0000000000000000000031 /* AppIcon.icon */ = {isa = PBXFileReference; lastKnownFileType = folder.iconcomposer.icon; path = AppIcon.icon; sourceTree = "<group>"; };
+		AB0000000000000000000041 /* PracticeItems.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PracticeItems.swift; sourceTree = "<group>"; };
+		AB0000000000000000000042 /* PracticeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PracticeView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -84,6 +93,7 @@
 		AA0000000000000000000002 = {
 			isa = PBXGroup;
 			children = (
+				AA0000000000000000000030 /* Shared */,
 				AA0000000000000000000004 /* NaratgeulKeyboard */,
 				AA0000000000000000000005 /* NaratgeulKeyboardExtension */,
 				AA0000000000000000000003 /* Products */,
@@ -104,6 +114,8 @@
 			children = (
 				AB0000000000000000000001 /* NaratgeulApp.swift */,
 				AB0000000000000000000002 /* ContentView.swift */,
+				AB0000000000000000000042 /* PracticeView.swift */,
+				AB0000000000000000000041 /* PracticeItems.swift */,
 				AB0000000000000000000003 /* Assets.xcassets */,
 				AB0000000000000000000031 /* AppIcon.icon */,
 				AB0000000000000000000004 /* Info.plist */,
@@ -119,11 +131,19 @@
 				AB0000000000000000000015 /* KeyButton.swift */,
 				AB0000000000000000000014 /* KeyModels.swift */,
 				AB0000000000000000000017 /* KeyboardTheme.swift */,
-				AB0000000000000000000011 /* NaratgeulEngine.swift */,
-				AB0000000000000000000012 /* Hangul.swift */,
 				AB0000000000000000000016 /* Info.plist */,
 			);
 			path = NaratgeulKeyboardExtension;
+			sourceTree = "<group>";
+		};
+		AA0000000000000000000030 /* Shared */ = {
+			isa = PBXGroup;
+			children = (
+				AB0000000000000000000012 /* Hangul.swift */,
+				AB0000000000000000000011 /* NaratgeulEngine.swift */,
+				AB0000000000000000000018 /* KeySequence.swift */,
+			);
+			path = Shared;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -229,6 +249,11 @@
 			files = (
 				AC0000000000000000000002 /* ContentView.swift in Sources */,
 				AC0000000000000000000001 /* NaratgeulApp.swift in Sources */,
+				AC0000000000000000000042 /* PracticeView.swift in Sources */,
+				AC0000000000000000000041 /* PracticeItems.swift in Sources */,
+				AC0000000000000000000043 /* NaratgeulEngine.swift in Sources */,
+				AC0000000000000000000044 /* Hangul.swift in Sources */,
+				AC0000000000000000000045 /* KeySequence.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -243,6 +268,7 @@
 				AC0000000000000000000017 /* KeyboardTheme.swift in Sources */,
 				AC0000000000000000000011 /* NaratgeulEngine.swift in Sources */,
 				AC0000000000000000000012 /* Hangul.swift in Sources */,
+				AC0000000000000000000018 /* KeySequence.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

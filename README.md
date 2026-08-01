@@ -10,16 +10,26 @@
 
 ```
 NaratgeulKeyboard.xcodeproj
-NaratgeulKeyboard/              컨테이너 앱 (설치 안내 + 시험 입력창 + 만든 사람)
+Shared/                         앱과 확장이 같이 쓰는 순수 로직 (UIKit 의존 없음)
+  Hangul.swift                  한글 유니코드 조합/분해
+  NaratgeulEngine.swift         나랏글 오토마타
+  KeySequence.swift             글자 → 키 순서 되짚기 (연습 힌트용)
+NaratgeulKeyboard/              컨테이너 앱 (설치 안내 + 연습 모드 + 시험 입력창)
+  PracticeItems.swift           연습 문제 (7단계 47문제)
+  PracticeView.swift            연습 화면
   AppIcon.icon/                 Liquid Glass 앱 아이콘 (변란 + '나' 두 겹)
 NaratgeulKeyboardExtension/     키보드 확장 본체
-  Hangul.swift                  한글 유니코드 조합/분해
-  NaratgeulEngine.swift         나랏글 오토마타 (순수 로직, UIKit 의존 없음)
   KeyboardViewController.swift  UITextDocumentProxy 연결
   KeyboardRootView.swift        SwiftUI 레이아웃
   KeyButton.swift  KeyModels.swift  KeyboardTheme.swift
 Tests/                          오토마타 테스트 (Xcode 없이 실행 가능)
 ```
+
+## 연습 모드
+
+컨테이너 앱에서 자음 자리 → 획 → 쌍 → 모음 → 받침 → 낱말 → 문장 순으로 익힌다.
+문제마다 "누르는 순서 보기"를 펴면 어떤 키를 어떤 차례로 누르는지 나온다.
+이 순서는 `KeySequence` 가 오토마타 규칙을 거꾸로 훑어 만든다.
 
 ## 입력 규칙
 
@@ -36,6 +46,19 @@ Tests/                          오토마타 테스트 (Xcode 없이 실행 가�
 ```
 
 예: `안녕` = ㅇ, ㅏㅓ, ㄴ, ㄴ, ㅏㅓ, ㅏㅓ, 획, ㅇ
+
+획과 쌍은 **방금 낸 자음**을 대상으로 삼는다. 받침 자리에서도 마찬가지다.
+
+```
+겹받침에 획   ㄻ → ㄼ → ㄿ → ㄻ   (뒤쪽 ㅁ→ㅂ→ㅍ 만 바뀐다)
+```
+
+`넓` 은 ㄹ 뒤에 ㅁ 을 누르는 순간 ㄻ 으로 붙어 버려서, 획이 겹받침에 먹지 않으면
+칠 방법이 아예 없다. `읊` 도 같다.
+
+된소리가 받침으로 설 수 없으면 (`ㄸ ㅃ ㅉ`, 또는 `ㄹ+ㅆ` 같은 조합) 그 자음은
+다음 글자의 초성으로 내려간다. `이따` 는 `인` 에서 쌍을 눌러, `날씨` 는 `낤` 에서
+쌍을 눌러 이 길로 간다.
 
 ## 레이어
 
@@ -122,8 +145,13 @@ Xcode 없이 Swift 커맨드라인 툴만 있으면 오토마타를 검증할 �
 ./Tests/run.sh
 ```
 
-55개 케이스(기본 음절, 획 추가, 쌍자음, 복합 모음, 받침·겹받침, 백스페이스,
+65개 케이스(기본 음절, 획 추가, 쌍자음, 복합 모음, 받침·겹받침, 백스페이스,
 기호 묶음 키, 문장)를 확인한다.
+
+여기에 더해 `KeySequence` 가 내놓은 키 순서를 다시 오토마타에 넣어 원래 글자가
+나오는지 되짚는다. 연습 문제 47개와 **한글 음절 11,172자 전부**를 훑는다.
+표를 손으로 뒤집어 놓은 것이라 조용히 어긋나기 쉬운데, 이 전수 검사가 그걸 막는다.
+`ㄼ`·`ㄿ` 받침을 칠 수 없던 것도 이 검사에서 드러났다.
 
 ## iOS 26 이후를 위해 신경 쓴 것
 
@@ -181,5 +209,7 @@ Safari 주소창처럼 앱 밖에서 올라오는 경우도 포함한다.
 
 - 오른쪽 기능 열의 폭(`KeyboardTheme.functionColumnRatio` ·
   `keypadFunctionColumnRatio`)은 원본 화면을 눈으로 재서 잡은 값이다.
+- 같은 기호 키에 묶인 기호 둘을 잇달아 칠 수 없다. `?!` 를 치면 `!` 가 `?` 를
+  덮어쓴다. 사이에 다른 키가 끼면 정상이다.
 - 커서 이동 제스처(스페이스바 쓸기)는 없다.
 - 이모지는 목록이 고정이고 최근 사용·검색·스킨톤 선택이 없다.

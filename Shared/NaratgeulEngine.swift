@@ -295,6 +295,8 @@ final class NaratgeulEngine {
         if let current = jong {
             if let next = Self.stroke[current], Hangul.isJongseong(next) {
                 jong = next
+            } else if let combined = strokeCompoundJong(current) {
+                jong = combined
             }
             return 0
         }
@@ -332,7 +334,14 @@ final class NaratgeulEngine {
 
         if let parts = Hangul.decompose(last) {
             if let jongChar = parts.jong {
-                guard let next = Self.stroke[jongChar], Hangul.isJongseong(next) else { return 0 }
+                let next: Character
+                if let plain = Self.stroke[jongChar], Hangul.isJongseong(plain) {
+                    next = plain
+                } else if let combined = strokeCompoundJong(jongChar) {
+                    next = combined
+                } else {
+                    return 0
+                }
                 cho = parts.cho
                 jung = parts.jung
                 jong = next
@@ -360,14 +369,55 @@ final class NaratgeulEngine {
         return 0
     }
 
+    /// 겹받침에 획을 더한다. 뒤쪽 자음만 바뀐다.
+    ///
+    /// ㄻ 의 ㅁ 에 획을 더하면 ㅂ 이 되어 ㄼ 이다. 한 번 더 누르면 ㄿ, 또 누르면
+    /// ㅁ 으로 돌아온다. 이 길이 없으면 ㄼ·ㄿ 받침은 칠 방법이 아예 없다.
+    /// ㄹ 뒤에 ㅁ 을 누르는 순간 ㄻ 으로 붙어 버려서 획을 받을 ㅁ 이 남지 않기 때문이다.
+    /// - Returns: 획을 더한 결과가 실제로 있는 겹받침일 때만 그 받침, 아니면 `nil`
+    private func strokeCompoundJong(_ jong: Character) -> Character? {
+        guard let (first, second) = Self.splitJong[jong],
+              let next = Self.stroke[second]
+        else { return nil }
+        return Self.compoundJong["\(first)+\(next)"]
+    }
+
+    /// 쌍 키. 방금 낸 자음을 된소리로 바꾼다.
+    ///
+    /// 받침 자리에서는 된소리가 그 자리에 못 서는 경우가 있다.
+    /// ㄸ·ㅃ·ㅉ 는 받침이 될 수 없고, ㄽ 의 ㅅ 을 ㅆ 으로 바꿔 봐야
+    /// ㄹ+ㅆ 은 겹받침이 아니다. 그럴 때는 그 자음을 다음 글자의 초성으로 내려보낸다.
+    /// "인" 에서 쌍을 눌러 "이따" 로, "낤" 에서 쌍을 눌러 "날씨" 로 가는 길이 이것이다.
     private func applyDouble() {
-        if let current = jong {
-            if let next = Self.doubled[current], Hangul.isJongseong(next) {
-                jong = next
+        guard let current = jong else {
+            if jung == nil, let current = cho, let next = Self.doubled[current] {
+                cho = next
             }
             return
         }
-        if jung == nil, let current = cho, let next = Self.doubled[current] {
+
+        // 홑받침이 그대로 된소리 받침이 되는 경우 (ㄱ→ㄲ, ㅅ→ㅆ)
+        if let next = Self.doubled[current], Hangul.isJongseong(next) {
+            jong = next
+            return
+        }
+
+        // 겹받침이면 뒤쪽 자음만 대상이다
+        if let (first, second) = Self.splitJong[current], let next = Self.doubled[second] {
+            if let combined = Self.compoundJong["\(first)+\(next)"] {
+                jong = combined
+            } else {
+                jong = first
+                flush()
+                cho = next
+            }
+            return
+        }
+
+        // 받침으로 설 수 없는 된소리는 아래 글자로 내려간다
+        if let next = Self.doubled[current] {
+            jong = nil
+            flush()
             cho = next
         }
     }
