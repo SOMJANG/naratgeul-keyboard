@@ -32,10 +32,9 @@ title: 나랏글 키보드
 
 ## 문의 · 지원
 
-버그 제보나 문의는 아래 어느 쪽이든 좋습니다.
+버그 제보나 문의는 GitHub 이슈로 남겨 주세요. 확인하는 대로 답을 드립니다.
 
-- **이메일** — [54468345+SOMJANG@users.noreply.github.com](mailto:54468345+SOMJANG@users.noreply.github.com)
-- **GitHub 이슈** — [SOMJANG/naratgeul-keyboard/issues](https://github.com/SOMJANG/naratgeul-keyboard/issues)
+- [github.com/SOMJANG/naratgeul-keyboard/issues](https://github.com/SOMJANG/naratgeul-keyboard/issues)
 
 ## 문서
 

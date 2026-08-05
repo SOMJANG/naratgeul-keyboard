@@ -62,8 +62,9 @@ iOS 에서는 이 권한 없이 진동을 낼 수 없기 때문입니다.
 
 ## 8. 문의
 
-- 이메일: [54468345+SOMJANG@users.noreply.github.com](mailto:54468345+SOMJANG@users.noreply.github.com)
-- GitHub: [SOMJANG/naratgeul-keyboard](https://github.com/SOMJANG/naratgeul-keyboard/issues)
+이 처리방침이나 앱에 대한 문의는 GitHub 이슈로 남겨 주세요.
+
+- [github.com/SOMJANG/naratgeul-keyboard/issues](https://github.com/SOMJANG/naratgeul-keyboard/issues)
 
 ---
 
@@ -125,5 +126,6 @@ If this policy changes, this page and its effective date will be updated.
 
 ## 8. Contact
 
-- Email: [54468345+SOMJANG@users.noreply.github.com](mailto:54468345+SOMJANG@users.noreply.github.com)
-- GitHub: [SOMJANG/naratgeul-keyboard](https://github.com/SOMJANG/naratgeul-keyboard/issues)
+For questions about this policy or the App, please open a GitHub issue.
+
+- [github.com/SOMJANG/naratgeul-keyboard/issues](https://github.com/SOMJANG/naratgeul-keyboard/issues)
