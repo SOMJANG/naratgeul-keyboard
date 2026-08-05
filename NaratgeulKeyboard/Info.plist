@@ -8,6 +8,8 @@
 	<string>나랏글</string>
 	<key>CFBundleExecutable</key>
 	<string>$(EXECUTABLE_NAME)</string>
+	<key>CFBundleIconName</key>
+	<string>AppIcon</string>
 	<key>CFBundleIdentifier</key>
 	<string>$(PRODUCT_BUNDLE_IDENTIFIER)</string>
 	<key>CFBundleInfoDictionaryVersion</key>
@@ -19,7 +21,7 @@
 	<key>CFBundleShortVersionString</key>
 	<string>1.0</string>
 	<key>CFBundleVersion</key>
-	<string>1</string>
+	<string>2</string>
 	<!-- 암호화를 쓰지 않는다. 이게 없으면 빌드를 올릴 때마다
 	     App Store Connect 가 수출 규정을 묻고 심사가 그만큼 늦어진다. -->
 	<key>ITSAppUsesNonExemptEncryption</key>
