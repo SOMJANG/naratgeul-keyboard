@@ -58,7 +58,7 @@ struct KeyboardRootView: View {
                     onAction(.nextKeyboard)
                 } label: {
                     Image(systemName: "globe")
-                        .font(.system(size: 15))
+                        .font(.system(size: 16))
                         .foregroundColor(KeyboardTheme.tabLabel(scheme, active: false))
                         .frame(width: 36, height: KeyboardTheme.tabBarHeight)
                 }
@@ -77,7 +77,7 @@ struct KeyboardRootView: View {
     private func tab(_ title: String, active: Bool, action: @escaping () -> Void) -> some View {
         Button(action: action) {
             Text(title)
-                .font(.system(size: 13, weight: active ? .semibold : .medium))
+                .font(.system(size: 14, weight: active ? .semibold : .medium))
                 .foregroundColor(KeyboardTheme.tabLabel(scheme, active: active))
                 .padding(.horizontal, 10)
                 .frame(height: KeyboardTheme.tabBarHeight)
@@ -113,7 +113,7 @@ struct KeyboardRootView: View {
                 HStack(spacing: KeyboardTheme.keyGap) {
                     KeyButton(
                         definition: KeyDefinition(
-                            label: "123", style: .function, fontSize: 12,
+                            label: "123", style: .function, fontSize: 14,
                             action: .switchLayer(.numbers)
                         ),
                         onPress: perform
@@ -135,7 +135,7 @@ struct KeyboardRootView: View {
                         KeyButton(
                             definition: KeyDefinition(
                                 label: isShifted ? "⇧" : "⇧", style: .function,
-                                widthRatio: 1.4, fontSize: 17, action: .shift
+                                widthRatio: 1.4, fontSize: 19, action: .shift
                             ),
                             onPress: { _ in isShifted.toggle() }
                         )
@@ -144,7 +144,7 @@ struct KeyboardRootView: View {
                         KeyButton(
                             definition: KeyDefinition(
                                 label: isShifted ? letter.uppercased() : letter,
-                                fontSize: 18,
+                                fontSize: 20,
                                 action: .insert(isShifted ? letter.uppercased() : letter)
                             ),
                             onPress: perform
@@ -154,7 +154,7 @@ struct KeyboardRootView: View {
                         KeyButton(
                             definition: KeyDefinition(
                                 label: "⌫", style: .function,
-                                widthRatio: 1.4, fontSize: 19, action: .backspace
+                                widthRatio: 1.4, fontSize: 21, action: .backspace
                             ),
                             onPress: perform
                         )
@@ -238,19 +238,19 @@ struct KeyboardRootView: View {
             HStack(spacing: KeyboardTheme.keyGap) {
                 KeyButton(
                     definition: KeyDefinition(
-                        label: "한글", style: .function, fontSize: 13,
+                        label: "한글", style: .function, fontSize: 15,
                         action: .switchLayer(.hangul)
                     ),
                     onPress: perform
                 )
                 KeyButton(
-                    definition: KeyDefinition(label: "간격", style: .function, fontSize: 14, action: .space),
+                    definition: KeyDefinition(label: "간격", style: .function, fontSize: 16, action: .space),
                     onPress: perform
                 )
                 .frame(maxWidth: .infinity)
                 KeyButton(
                     definition: KeyDefinition(
-                        label: "⌫", style: .function, fontSize: 19, action: .backspace
+                        label: "⌫", style: .function, fontSize: 21, action: .backspace
                     ),
                     onPress: perform
                 )
@@ -265,18 +265,18 @@ struct KeyboardRootView: View {
         HStack(spacing: KeyboardTheme.keyGap) {
             KeyButton(
                 definition: KeyDefinition(
-                    label: "한글", style: .function, fontSize: 13,
+                    label: "한글", style: .function, fontSize: 15,
                     action: .switchLayer(.hangul)
                 ),
                 onPress: perform
             )
             KeyButton(
-                definition: KeyDefinition(label: "간격", style: .function, fontSize: 14, action: .space),
+                definition: KeyDefinition(label: "간격", style: .function, fontSize: 16, action: .space),
                 onPress: perform
             )
             .frame(maxWidth: .infinity)
             KeyButton(
-                definition: KeyDefinition(label: "↵", style: .function, fontSize: 17, action: .newline),
+                definition: KeyDefinition(label: "↵", style: .function, fontSize: 19, action: .newline),
                 onPress: perform
             )
             globeKey()
@@ -291,7 +291,7 @@ struct KeyboardRootView: View {
         KeyButton(
             definition: KeyDefinition(
                 label: "영어·이모지 전환", symbol: "globe", style: .function,
-                widthRatio: ratio, fontSize: 17, action: .cycleLayer
+                widthRatio: ratio, fontSize: 19, action: .cycleLayer
             ),
             onPress: perform
         )

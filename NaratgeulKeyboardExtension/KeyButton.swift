@@ -56,7 +56,7 @@ struct KeyButton: View {
                     HStack {
                         Spacer()
                         Text(number)
-                            .font(.system(size: 9, weight: .medium))
+                            .font(.system(size: 10, weight: .medium))
                             .foregroundColor(KeyboardTheme.keyNumber(scheme))
                     }
                     Spacer()
