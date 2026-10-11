@@ -2,13 +2,25 @@ import SwiftUI
 
 /// 키보드 전체 화면.
 struct KeyboardRootView: View {
-    let onAction: (KeyAction) -> Void
+    let onAction: (KeyPress) -> Void
     /// 지구본 키를 보여줄지 여부 (다른 키보드가 하나뿐이면 숨긴다)
     let showsNextKeyboardKey: Bool
 
-    @Environment(\.colorScheme) private var scheme
+    @Environment(\.colorScheme) private var systemScheme
+    @AppStorage(KeyboardAppearance.storageKey)
+    private var appearanceRaw = KeyboardAppearance.default.rawValue
     @State private var layer: KeyboardLayer = .hangul
     @State private var isShifted = false
+    @State private var showsAppearanceMenu = false
+
+    private var appearance: KeyboardAppearance {
+        KeyboardAppearance(rawValue: appearanceRaw) ?? .default
+    }
+
+    /// 키를 그릴 때 쓰는 색 체계. 설정이 시스템을 덮어쓴다.
+    private var scheme: ColorScheme {
+        appearance.resolve(system: systemScheme)
+    }
 
     var body: some View {
         VStack(spacing: 0) {
@@ -31,8 +43,13 @@ struct KeyboardRootView: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         // iOS 26 은 키보드를 모서리가 둥근 판 위에 얹어 준다.
         // 여기서 불투명한 배경을 칠하면 그 판과 색·모서리가 어긋나 이음매가 보인다.
-        // 시스템 배경이 그대로 비치도록 둔다.
-        .background(Color.clear)
+        // 그래서 평소에는 시스템 배경이 그대로 비치도록 둔다.
+        // 다만 설정으로 시스템과 다른 색을 골랐을 때는 시스템 판 색이 반대라서
+        // 그대로 두면 밝은 키가 어두운 판 위에 뜬다. 이때만 우리 배경을 깐다.
+        .background(scheme == systemScheme ? Color.clear : KeyboardTheme.background(scheme))
+        .overlay { if showsAppearanceMenu { appearanceMenu } }
+        // 아래 모든 키가 설정된 색 체계로 그려지게 한다.
+        .environment(\.colorScheme, scheme)
         // 키보드 뷰는 자체적으로 safe area 를 신경 쓰지 않는다.
         // 시스템이 이미 홈 인디케이터 여백을 붙여 주기 때문에
         // 여기서 또 붙이면 iOS 17 이후로 아래가 잘려 보인다.
@@ -53,12 +70,22 @@ struct KeyboardRootView: View {
 
             Spacer(minLength: 0)
 
+            Button {
+                showsAppearanceMenu.toggle()
+            } label: {
+                Image(systemName: "circle.lefthalf.filled")
+                    .font(.system(size: 15))
+                    .foregroundColor(KeyboardTheme.tabLabel(scheme, active: showsAppearanceMenu))
+                    .frame(width: 36, height: KeyboardTheme.tabBarHeight)
+            }
+            .accessibilityLabel("키보드 색")
+
             if showsNextKeyboardKey {
                 Button {
-                    onAction(.nextKeyboard)
+                    perform(.nextKeyboard)
                 } label: {
                     Image(systemName: "globe")
-                        .font(.system(size: 15))
+                        .font(.system(size: 16))
                         .foregroundColor(KeyboardTheme.tabLabel(scheme, active: false))
                         .frame(width: 36, height: KeyboardTheme.tabBarHeight)
                 }
@@ -77,7 +104,7 @@ struct KeyboardRootView: View {
     private func tab(_ title: String, active: Bool, action: @escaping () -> Void) -> some View {
         Button(action: action) {
             Text(title)
-                .font(.system(size: 13, weight: active ? .semibold : .medium))
+                .font(.system(size: 14, weight: active ? .semibold : .medium))
                 .foregroundColor(KeyboardTheme.tabLabel(scheme, active: active))
                 .padding(.horizontal, 10)
                 .frame(height: KeyboardTheme.tabBarHeight)
@@ -91,6 +118,67 @@ struct KeyboardRootView: View {
                 }
         }
         .buttonStyle(.plain)
+    }
+
+    // MARK: - 키보드 색 설정
+
+    /// 탭바의 반달 버튼을 누르면 뜨는 작은 메뉴.
+    ///
+    /// 키보드 확장에서는 시트나 팝오버를 띄울 수 없어서 오버레이로 직접 그린다.
+    /// 메뉴 바깥을 누르면 닫힌다.
+    private var appearanceMenu: some View {
+        ZStack(alignment: .topTrailing) {
+            // 바깥 탭을 받아 닫기 위한 투명 막. 완전 투명이면 히트 테스트에서 빠진다.
+            Color.black.opacity(0.001)
+                .ignoresSafeArea()
+                .onTapGesture { showsAppearanceMenu = false }
+
+            VStack(alignment: .leading, spacing: 0) {
+                Text("키보드 색")
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundColor(KeyboardTheme.keyNumber(scheme))
+                    .padding(.horizontal, 14)
+                    .padding(.top, 10)
+                    .padding(.bottom, 6)
+
+                ForEach(KeyboardAppearance.allCases) { option in
+                    Button {
+                        appearanceRaw = option.rawValue
+                        showsAppearanceMenu = false
+                    } label: {
+                        HStack {
+                            Text(option.title)
+                                .font(.system(size: 15, weight: option == appearance ? .semibold : .regular))
+                            Spacer(minLength: 16)
+                            if option == appearance {
+                                Image(systemName: "checkmark")
+                                    .font(.system(size: 13, weight: .semibold))
+                            }
+                        }
+                        .foregroundColor(KeyboardTheme.keyLabel(scheme))
+                        .padding(.horizontal, 14)
+                        .frame(height: 40)
+                        .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
+
+                    if option != KeyboardAppearance.allCases.last {
+                        Rectangle()
+                            .fill(KeyboardTheme.divider(scheme))
+                            .frame(height: 0.5)
+                            .padding(.leading, 14)
+                    }
+                }
+            }
+            .frame(width: 200)
+            .background(
+                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                    .fill(KeyboardTheme.characterKey(scheme))
+                    .shadow(color: Color.black.opacity(0.25), radius: 10, y: 4)
+            )
+            .padding(.top, KeyboardTheme.tabBarHeight + 4)
+            .padding(.trailing, 8)
+        }
     }
 
     // MARK: - 한글 레이어
@@ -113,7 +201,7 @@ struct KeyboardRootView: View {
                 HStack(spacing: KeyboardTheme.keyGap) {
                     KeyButton(
                         definition: KeyDefinition(
-                            label: "123", style: .function, fontSize: 12,
+                            label: "123", style: .function, fontSize: 14,
                             action: .switchLayer(.numbers)
                         ),
                         onPress: perform
@@ -135,7 +223,7 @@ struct KeyboardRootView: View {
                         KeyButton(
                             definition: KeyDefinition(
                                 label: isShifted ? "⇧" : "⇧", style: .function,
-                                widthRatio: 1.4, fontSize: 17, action: .shift
+                                widthRatio: 1.4, fontSize: 19, action: .shift
                             ),
                             onPress: { _ in isShifted.toggle() }
                         )
@@ -144,7 +232,7 @@ struct KeyboardRootView: View {
                         KeyButton(
                             definition: KeyDefinition(
                                 label: isShifted ? letter.uppercased() : letter,
-                                fontSize: 18,
+                                fontSize: 20,
                                 action: .insert(isShifted ? letter.uppercased() : letter)
                             ),
                             onPress: perform
@@ -154,7 +242,7 @@ struct KeyboardRootView: View {
                         KeyButton(
                             definition: KeyDefinition(
                                 label: "⌫", style: .function,
-                                widthRatio: 1.4, fontSize: 19, action: .backspace
+                                widthRatio: 1.4, fontSize: 21, action: .backspace
                             ),
                             onPress: perform
                         )
@@ -238,19 +326,19 @@ struct KeyboardRootView: View {
             HStack(spacing: KeyboardTheme.keyGap) {
                 KeyButton(
                     definition: KeyDefinition(
-                        label: "한글", style: .function, fontSize: 13,
+                        label: "한글", style: .function, fontSize: 15,
                         action: .switchLayer(.hangul)
                     ),
                     onPress: perform
                 )
                 KeyButton(
-                    definition: KeyDefinition(label: "간격", style: .function, fontSize: 14, action: .space),
+                    definition: KeyDefinition(label: "간격", style: .function, fontSize: 16, action: .space),
                     onPress: perform
                 )
                 .frame(maxWidth: .infinity)
                 KeyButton(
                     definition: KeyDefinition(
-                        label: "⌫", style: .function, fontSize: 19, action: .backspace
+                        label: "⌫", style: .function, fontSize: 21, action: .backspace
                     ),
                     onPress: perform
                 )
@@ -265,18 +353,18 @@ struct KeyboardRootView: View {
         HStack(spacing: KeyboardTheme.keyGap) {
             KeyButton(
                 definition: KeyDefinition(
-                    label: "한글", style: .function, fontSize: 13,
+                    label: "한글", style: .function, fontSize: 15,
                     action: .switchLayer(.hangul)
                 ),
                 onPress: perform
             )
             KeyButton(
-                definition: KeyDefinition(label: "간격", style: .function, fontSize: 14, action: .space),
+                definition: KeyDefinition(label: "간격", style: .function, fontSize: 16, action: .space),
                 onPress: perform
             )
             .frame(maxWidth: .infinity)
             KeyButton(
-                definition: KeyDefinition(label: "↵", style: .function, fontSize: 17, action: .newline),
+                definition: KeyDefinition(label: "↵", style: .function, fontSize: 19, action: .newline),
                 onPress: perform
             )
             globeKey()
@@ -291,7 +379,7 @@ struct KeyboardRootView: View {
         KeyButton(
             definition: KeyDefinition(
                 label: "영어·이모지 전환", symbol: "globe", style: .function,
-                widthRatio: ratio, fontSize: 17, action: .cycleLayer
+                widthRatio: ratio, fontSize: 19, action: .cycleLayer
             ),
             onPress: perform
         )
@@ -303,8 +391,8 @@ struct KeyboardRootView: View {
     ///
     /// 레이어 전환은 이 뷰의 `@State` 로만 표현되므로 여기서 직접 처리해야 한다.
     /// 컨트롤러로도 넘겨서 조합 중인 글자를 확정하게 한다.
-    private func perform(_ action: KeyAction) {
-        switch action {
+    private func perform(_ press: KeyPress) {
+        switch press.action {
         case .switchLayer(let target):
             switchTo(target)
         case .cycleLayer:
@@ -314,7 +402,12 @@ struct KeyboardRootView: View {
         default:
             break
         }
-        onAction(action)
+        onAction(press)
+    }
+
+    /// 탭바나 이모지처럼 `KeyButton` 을 거치지 않는 자리에서 쓴다.
+    private func perform(_ action: KeyAction) {
+        perform(KeyPress(action: action))
     }
 
     private func switchTo(_ target: KeyboardLayer) {

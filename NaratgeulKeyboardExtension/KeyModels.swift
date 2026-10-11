@@ -21,6 +21,16 @@ enum KeyAction: Equatable {
     case shift
 }
 
+/// 키가 한 번 눌린 사건.
+///
+/// 처음 누른 것과 꾹 눌러 자동으로 반복된 것을 구분한다.
+/// 반복 입력은 소리와 진동을 내지 않는다. 초당 열 번 넘게 딸깍거리면 시끄럽다.
+struct KeyPress {
+    let action: KeyAction
+    /// 꾹 누르고 있어서 자동 반복된 입력이면 true. 지금은 백스페이스만 반복된다.
+    var isRepeat = false
+}
+
 /// 키 모양.
 enum KeyStyle {
     case character
@@ -37,7 +47,7 @@ struct KeyDefinition: Identifiable {
     var style: KeyStyle = .character
     /// 그리드에서 차지하는 가로 비율
     var widthRatio: CGFloat = 1
-    var fontSize: CGFloat = 20
+    var fontSize: CGFloat = 22
     let action: KeyAction
 }
 
@@ -63,20 +73,20 @@ enum KeyboardLayout {
         [
             KeyDefinition(label: "ㄱ", number: "1", action: .hangul(.consonant("ㄱ"))),
             KeyDefinition(label: "ㄴ", number: "2", action: .hangul(.consonant("ㄴ"))),
-            KeyDefinition(label: "ㅏㅓ", number: "3", fontSize: 19, action: .hangul(.aeo)),
-            functionColumn(label: "⌫", fontSize: 19, action: .backspace),
+            KeyDefinition(label: "ㅏㅓ", number: "3", fontSize: 21, action: .hangul(.aeo)),
+            functionColumn(label: "⌫", fontSize: 21, action: .backspace),
         ],
         [
             KeyDefinition(label: "ㄹ", number: "4", action: .hangul(.consonant("ㄹ"))),
             KeyDefinition(label: "ㅁ", number: "5", action: .hangul(.consonant("ㅁ"))),
-            KeyDefinition(label: "ㅗㅜ", number: "6", fontSize: 19, action: .hangul(.ou)),
-            functionColumn(label: "간격", fontSize: 14, action: .space),
+            KeyDefinition(label: "ㅗㅜ", number: "6", fontSize: 21, action: .hangul(.ou)),
+            functionColumn(label: "간격", fontSize: 16, action: .space),
         ],
         [
             KeyDefinition(label: "ㅅ", number: "7", action: .hangul(.consonant("ㅅ"))),
             KeyDefinition(label: "ㅇ", number: "8", action: .hangul(.consonant("ㅇ"))),
             KeyDefinition(label: "ㅣ", number: "9", action: .hangul(.i)),
-            functionColumn(label: "↵", fontSize: 17, action: .newline),
+            functionColumn(label: "↵", fontSize: 19, action: .newline),
         ],
     ]
 
@@ -98,9 +108,9 @@ enum KeyboardLayout {
 
     /// 마지막 행의 왼쪽 3개 키 (획 / ㅡ / 쌍)
     static let hangulBottomRow: [KeyDefinition] = [
-        KeyDefinition(label: "획", style: .function, fontSize: 14, action: .hangul(.stroke)),
+        KeyDefinition(label: "획", style: .function, fontSize: 16, action: .hangul(.stroke)),
         KeyDefinition(label: "ㅡ", number: "0", action: .hangul(.eu)),
-        KeyDefinition(label: "쌍", style: .function, fontSize: 14, action: .hangul(.double)),
+        KeyDefinition(label: "쌍", style: .function, fontSize: 16, action: .hangul(.double)),
     ]
 
     // MARK: - 영문 (QWERTY)
@@ -127,14 +137,14 @@ enum KeyboardLayout {
             style: style,
             widthRatio: ratio,
             // 좁은 기능 열에 들어가는 .,?! 는 더 줄여야 네 글자가 다 들어간다.
-            fontSize: options.count >= 4 ? (ratio < 1 ? 11 : 13) : 15,
+            fontSize: options.count >= 4 ? (ratio < 1 ? 13 : 15) : 17,
             action: .cycleSymbol(options)
         )
     }
 
     /// 한글로 돌아가는 키. 숫자·기호 레이어 마지막 행 왼쪽 칸을 전환 키와 나눠 쓴다.
     static let toHangulKey = KeyDefinition(
-        label: "한글", style: .function, fontSize: 12, action: .switchLayer(.hangul)
+        label: "한글", style: .function, fontSize: 14, action: .switchLayer(.hangul)
     )
 
     /// 숫자·기호 레이어 오른쪽 기능 열 (위 3칸).
@@ -142,14 +152,14 @@ enum KeyboardLayout {
     /// 한글 레이어와 달리 간격이 여기 없다. 간격은 마지막 행 셋째 칸으로 내려가고
     /// 그 자리를 .,?! 가 받는다. 원래 나랏글 배열이 그렇게 잡혀 있다.
     static let keypadRightColumn: [KeyDefinition] = [
-        keypadFunction(label: "⌫", fontSize: 19, action: .backspace),
-        keypadFunction(label: "↵", fontSize: 17, action: .newline),
+        keypadFunction(label: "⌫", fontSize: 21, action: .backspace),
+        keypadFunction(label: "↵", fontSize: 19, action: .newline),
         cycled([".", ",", "?", "!"], style: .function, ratio: KeyboardTheme.keypadFunctionColumnRatio),
     ]
 
     /// 숫자·기호 레이어 마지막 행 셋째 칸. 글자 열 폭을 그대로 쓰는 넓은 간격 키다.
     static let keypadSpaceKey = KeyDefinition(
-        label: "간격", style: .function, fontSize: 14, action: .space
+        label: "간격", style: .function, fontSize: 16, action: .space
     )
 
     private static func keypadFunction(
@@ -186,7 +196,7 @@ enum KeyboardLayout {
     static let numberKeypad = Keypad(
         rows: [digitRow("1", "2", "3"), digitRow("4", "5", "6"), digitRow("7", "8", "9")],
         switchKey: KeyDefinition(
-            label: "#+=", style: .function, fontSize: 12, action: .switchLayer(.symbols)
+            label: "#+=", style: .function, fontSize: 14, action: .switchLayer(.symbols)
         ),
         center: KeyDefinition(label: "0", action: .insert("0"))
     )
@@ -210,7 +220,7 @@ enum KeyboardLayout {
             [cycled(["[", ":", "]"]), cycled(["\"", "'", ";"]), cycled(["/", "\\", "|"])],
         ],
         switchKey: KeyDefinition(
-            label: "123", style: .function, fontSize: 12, action: .switchLayer(.numbers)
+            label: "123", style: .function, fontSize: 14, action: .switchLayer(.numbers)
         ),
         center: cycled(["~", "…", "•"])
     )

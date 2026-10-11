@@ -7,7 +7,7 @@ import UIKit
 /// 이유는 그쪽 주석에 적어 뒀다.
 struct KeyButton: View {
     let definition: KeyDefinition
-    let onPress: (KeyAction) -> Void
+    let onPress: (KeyPress) -> Void
 
     @Environment(\.colorScheme) private var scheme
     @State private var isPressed = false
@@ -56,7 +56,7 @@ struct KeyButton: View {
                     HStack {
                         Spacer()
                         Text(number)
-                            .font(.system(size: 9, weight: .medium))
+                            .font(.system(size: 10, weight: .medium))
                             .foregroundColor(KeyboardTheme.keyNumber(scheme))
                     }
                     Spacer()
@@ -80,7 +80,7 @@ struct KeyButton: View {
 
     private func press() {
         isPressed = true
-        onPress(definition.action)
+        onPress(KeyPress(action: definition.action))
         startRepeating()
     }
 
@@ -103,7 +103,7 @@ struct KeyButton: View {
             // 손을 뗐는데도 취소가 안 들어온 경우를 대비한 상한.
             // 20초쯤 누르고 있는 것과 같아서 정상적으로는 닿지 않는다.
             while !Task.isCancelled, count < 400 {
-                onPress(definition.action)
+                onPress(KeyPress(action: definition.action, isRepeat: true))
                 count += 1
                 if count == 12 { interval = 60_000_000 }
                 try? await Task.sleep(nanoseconds: interval)
