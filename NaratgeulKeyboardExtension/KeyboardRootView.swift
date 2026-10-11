@@ -232,7 +232,9 @@ struct KeyboardRootView: View {
                         KeyButton(
                             definition: KeyDefinition(
                                 label: isShifted ? letter.uppercased() : letter,
-                                fontSize: 20,
+                                // 한글 키(22)보다 조금 크다. 영문 키는 한 글자뿐이고 폭도 좁아서
+                                // 같은 크기면 더 작아 보인다.
+                                fontSize: 23,
                                 action: .insert(isShifted ? letter.uppercased() : letter)
                             ),
                             onPress: perform
