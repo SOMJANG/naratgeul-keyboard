@@ -34,10 +34,26 @@ final class KeyboardViewController: UIInputViewController {
         // 높이를 우리가 직접 정한다고 시스템에 알린다.
         inputView?.allowsSelfSizing = true
         installKeyboardView()
+
+        // 호스트 앱이 잠깐 다른 앱에 갔다가 돌아올 때. 키보드 뷰는 그대로라
+        // viewWillAppear 가 다시 불리지 않는다. 그 사이 호스트가 문서를 바꿨을 수 있으니
+        // 조합 상태를 비워 둔다.
+        NotificationCenter.default.addObserver(
+            forName: NSNotification.Name.NSExtensionHostWillEnterForeground,
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            self?.finishComposing()
+        }
     }
 
     override func viewWillAppear(_ animated: Bool) {
         super.viewWillAppear(animated)
+        // 올라올 때마다 조합 상태를 비운다.
+        // 보통은 내려갈 때 이미 비웠지만, 메모리 부족으로 확장이 중간에 죽었다 살아나거나
+        // 알림 답장 창처럼 호스트가 바뀌는 경우 내려가는 쪽 콜백이 안 올 수 있다.
+        // 이전 문서에서 쓰던 조합 글자가 남아 있으면 첫 입력부터 엉뚱한 글자를 지운다.
+        finishComposing()
         // viewDidLoad 시점의 traitCollection 은 아직 확정 전이라 높이가 틀릴 수 있다.
         // 그대로 두면 키보드가 한 번 올라온 뒤 한 프레임 뒤에 높이가 튄다.
         updateHeight()
