@@ -1,5 +1,39 @@
 import SwiftUI
 
+/// 키보드 색을 어디에 맞출지.
+///
+/// 기본은 라이트다. 시스템이 다크여도 키는 밝게 그린다.
+/// 저장은 확장 자체의 `UserDefaults.standard` 에 한다. App Group 공유 컨테이너는
+/// 전체 접근 권한이 없으면 못 읽으므로 컨테이너 앱과 나눠 쓸 수 없다.
+/// 그래서 설정 화면도 키보드 안에 둔다.
+enum KeyboardAppearance: String, CaseIterable, Identifiable {
+    case light
+    case dark
+    case system
+
+    static let storageKey = "keyboardAppearance"
+    static let `default`: KeyboardAppearance = .light
+
+    var id: String { rawValue }
+
+    var title: String {
+        switch self {
+        case .light: return "라이트"
+        case .dark: return "다크"
+        case .system: return "시스템 따라가기"
+        }
+    }
+
+    /// 실제로 그릴 색 체계.
+    func resolve(system: ColorScheme) -> ColorScheme {
+        switch self {
+        case .light: return .light
+        case .dark: return .dark
+        case .system: return system
+        }
+    }
+}
+
 /// 시스템 키보드에 맞춘 색과 치수.
 enum KeyboardTheme {
 
