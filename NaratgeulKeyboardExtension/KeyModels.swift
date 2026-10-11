@@ -21,6 +21,16 @@ enum KeyAction: Equatable {
     case shift
 }
 
+/// 키가 한 번 눌린 사건.
+///
+/// 처음 누른 것과 꾹 눌러 자동으로 반복된 것을 구분한다.
+/// 반복 입력은 소리와 진동을 내지 않는다. 초당 열 번 넘게 딸깍거리면 시끄럽다.
+struct KeyPress {
+    let action: KeyAction
+    /// 꾹 누르고 있어서 자동 반복된 입력이면 true. 지금은 백스페이스만 반복된다.
+    var isRepeat = false
+}
+
 /// 키 모양.
 enum KeyStyle {
     case character

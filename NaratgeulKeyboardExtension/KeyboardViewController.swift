@@ -21,9 +21,6 @@ final class KeyboardViewController: UIInputViewController {
     /// 키 눌림 햅틱. 전체 접근 권한이 있을 때만 실제로 진동한다.
     private let feedback = UIImpactFeedbackGenerator(style: .light)
 
-    /// 마지막으로 진동을 낸 시각.
-    private var lastHapticTime: CFTimeInterval = 0
-
     /// 전체 접근 권한이 있는지.
     ///
     /// `hasFullAccess` 는 부를 때마다 시스템에 물어본다. 키마다 묻지 않고
@@ -76,8 +73,8 @@ final class KeyboardViewController: UIInputViewController {
 
     private func installKeyboardView() {
         let root = KeyboardRootView(
-            onAction: { [weak self] action in
-                self?.handle(action)
+            onAction: { [weak self] press in
+                self?.handle(press)
             },
             showsNextKeyboardKey: needsInputModeSwitchKey
         )
@@ -124,9 +121,10 @@ final class KeyboardViewController: UIInputViewController {
 
     // MARK: - 키 처리
 
-    private func handle(_ action: KeyAction) {
+    private func handle(_ press: KeyPress) {
         // 눌린 느낌이 글자보다 먼저 오도록 피드백을 맨 앞에 둔다.
-        playFeedback()
+        // 꾹 눌러 반복되는 삭제는 조용히 지나간다. 초당 열 번 넘게 딸깍거리면 시끄럽다.
+        if !press.isRepeat { playFeedback() }
 
         // 문서 작업은 호스트 앱과 프로세스를 오가느라 늘 얼마간 걸린다.
         // 호스트가 직전 입력을 처리하느라 바쁘면 그만큼 더 기다린다.
@@ -134,7 +132,7 @@ final class KeyboardViewController: UIInputViewController {
         // 반응하는 것처럼 보인다. 눌린 색이 들어간 화면 갱신이 먼저 나가고 나서 하도록
         // 이번 트랜잭션이 끝난 직후로 미룬다. 추가 프레임을 기다리지는 않는다.
         CATransaction.setCompletionBlock { [weak self] in
-            self?.dispatch(action)
+            self?.dispatch(press.action)
         }
     }
 
@@ -192,12 +190,6 @@ final class KeyboardViewController: UIInputViewController {
         UIDevice.current.playInputClick()
 
         guard fullAccessGranted else { return }
-        // 백스페이스를 꾹 눌러 연속 삭제할 때는 초당 열대여섯 번씩 불린다.
-        // 그 속도로 진동을 다 내면 뭉개져서 오히려 지저분하다. 소리만 따라가게 둔다.
-        let now = CACurrentMediaTime()
-        guard now - lastHapticTime > 0.07 else { return }
-        lastHapticTime = now
-
         feedback.impactOccurred(intensity: 0.7)
         // 연타할 때 두 번째부터 진동이 약해지지 않게 매번 다시 깨운다.
         feedback.prepare()

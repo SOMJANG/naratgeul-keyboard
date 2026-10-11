@@ -2,7 +2,7 @@ import SwiftUI
 
 /// 키보드 전체 화면.
 struct KeyboardRootView: View {
-    let onAction: (KeyAction) -> Void
+    let onAction: (KeyPress) -> Void
     /// 지구본 키를 보여줄지 여부 (다른 키보드가 하나뿐이면 숨긴다)
     let showsNextKeyboardKey: Bool
 
@@ -82,7 +82,7 @@ struct KeyboardRootView: View {
 
             if showsNextKeyboardKey {
                 Button {
-                    onAction(.nextKeyboard)
+                    perform(.nextKeyboard)
                 } label: {
                     Image(systemName: "globe")
                         .font(.system(size: 16))
@@ -391,8 +391,8 @@ struct KeyboardRootView: View {
     ///
     /// 레이어 전환은 이 뷰의 `@State` 로만 표현되므로 여기서 직접 처리해야 한다.
     /// 컨트롤러로도 넘겨서 조합 중인 글자를 확정하게 한다.
-    private func perform(_ action: KeyAction) {
-        switch action {
+    private func perform(_ press: KeyPress) {
+        switch press.action {
         case .switchLayer(let target):
             switchTo(target)
         case .cycleLayer:
@@ -402,7 +402,12 @@ struct KeyboardRootView: View {
         default:
             break
         }
-        onAction(action)
+        onAction(press)
+    }
+
+    /// 탭바나 이모지처럼 `KeyButton` 을 거치지 않는 자리에서 쓴다.
+    private func perform(_ action: KeyAction) {
+        perform(KeyPress(action: action))
     }
 
     private func switchTo(_ target: KeyboardLayer) {
