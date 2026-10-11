@@ -24,11 +24,11 @@ final class KeyboardViewController: UIInputViewController {
     /// 마지막으로 진동을 낸 시각.
     private var lastHapticTime: CFTimeInterval = 0
 
-    /// 우리가 문서를 고치는 중인지.
+    /// 전체 접근 권한이 있는지.
     ///
-    /// `textDidChange` 는 우리가 넣고 지운 글자 때문에도 불린다.
-    /// 그때마다 문맥을 다시 읽으면 키 하나에 프로세스 왕복이 두어 번 더 붙는다.
-    private var isApplying = false
+    /// `hasFullAccess` 는 부를 때마다 시스템에 물어본다. 키마다 묻지 않고
+    /// 올라올 때 한 번 받아 둔다. 권한은 설정 앱에서만 바뀌고 그러면 키보드가 다시 뜬다.
+    private var fullAccessGranted = false
 
     // MARK: - 생명주기
 
@@ -44,8 +44,9 @@ final class KeyboardViewController: UIInputViewController {
         // viewDidLoad 시점의 traitCollection 은 아직 확정 전이라 높이가 틀릴 수 있다.
         // 그대로 두면 키보드가 한 번 올라온 뒤 한 프레임 뒤에 높이가 튄다.
         updateHeight()
+        fullAccessGranted = hasFullAccess
         // 햅틱 엔진을 미리 깨워 둔다. 안 하면 첫 진동이 눈에 띄게 늦다.
-        if hasFullAccess { feedback.prepare() }
+        if fullAccessGranted { feedback.prepare() }
     }
 
     override func viewWillDisappear(_ animated: Bool) {
@@ -65,14 +66,11 @@ final class KeyboardViewController: UIInputViewController {
         })
     }
 
-    override func textDidChange(_ textInput: UITextInput?) {
-        super.textDidChange(textInput)
-        // 우리가 방금 넣거나 지운 글자 때문에도 불린다. 그건 건너뛴다.
-        guard !isApplying else { return }
-        // 조합 중인 글자가 없으면 확인할 것도 없다. 문맥을 아예 안 읽는다.
-        guard !preeditInDocument.isEmpty else { return }
-        syncWithDocument(textDocumentProxy.documentContextBeforeInput)
-    }
+    // `textDidChange` 는 일부러 안 받는다.
+    //
+    // 우리가 넣고 지운 글자 때문에도 키마다 불리는데, 거기서 문맥을 읽으면
+    // 키 하나에 프로세스 왕복이 하나 더 붙는다. 사용자가 커서를 옮겼는지는
+    // 어차피 다음 키를 처리하기 직전에 `run` 이 확인하므로 여기서 미리 볼 이유가 없다.
 
     // MARK: - 뷰 구성
 
@@ -128,9 +126,19 @@ final class KeyboardViewController: UIInputViewController {
 
     private func handle(_ action: KeyAction) {
         // 눌린 느낌이 글자보다 먼저 오도록 피드백을 맨 앞에 둔다.
-        // 아래 문서 작업은 호스트 앱과 프로세스를 오가느라 늘 얼마간 걸린다.
         playFeedback()
 
+        // 문서 작업은 호스트 앱과 프로세스를 오가느라 늘 얼마간 걸린다.
+        // 호스트가 직전 입력을 처리하느라 바쁘면 그만큼 더 기다린다.
+        // 여기서 바로 하면 키의 눌린 색이 그 뒤에야 그려져서 손가락보다 한 박자 늦게
+        // 반응하는 것처럼 보인다. 눌린 색이 들어간 화면 갱신이 먼저 나가고 나서 하도록
+        // 이번 트랜잭션이 끝난 직후로 미룬다. 추가 프레임을 기다리지는 않는다.
+        CATransaction.setCompletionBlock { [weak self] in
+            self?.dispatch(action)
+        }
+    }
+
+    private func dispatch(_ action: KeyAction) {
         switch action {
         case .hangul(let key):
             run(key)
@@ -183,7 +191,7 @@ final class KeyboardViewController: UIInputViewController {
     private func playFeedback() {
         UIDevice.current.playInputClick()
 
-        guard hasFullAccess else { return }
+        guard fullAccessGranted else { return }
         // 백스페이스를 꾹 눌러 연속 삭제할 때는 초당 열대여섯 번씩 불린다.
         // 그 속도로 진동을 다 내면 뭉개져서 오히려 지저분하다. 소리만 따라가게 둔다.
         let now = CACurrentMediaTime()
@@ -201,10 +209,6 @@ final class KeyboardViewController: UIInputViewController {
     /// 조합 중인 글자를 직접 넣었다가 지우고 다시 넣는 식으로 흉내 낸다.
     private func apply(_ output: KeyOutput) {
         let proxy = textDocumentProxy
-
-        isApplying = true
-        // 호스트 앱에서 textDidChange 가 돌아온 뒤에 푼다.
-        defer { DispatchQueue.main.async { [weak self] in self?.isApplying = false } }
 
         // 1. 문서에 남아 있는 이전 조합 글자를 지운다
         if !preeditInDocument.isEmpty {
