@@ -248,8 +248,17 @@ final class KeyboardViewController: UIInputViewController {
     /// 엉뚱한 글자를 지우게 된다. 어긋났으면 조합을 버리고 새로 시작한다.
     private func syncWithDocument(_ context: String?) {
         guard !preeditInDocument.isEmpty else { return }
-        // 보안 입력 필드에서는 앞 문맥을 못 읽는다 (nil). 이때는 그대로 믿고 간다.
-        guard let context else { return }
+        guard let context else {
+            // 커서 앞에 글자가 없으면 빈 문자열이 아니라 nil 이 온다.
+            // 호스트가 우리 모르게 문서를 비웠을 때가 바로 이 경우다.
+            // 카톡은 전송 버튼을 누르면 키보드를 내리지 않고 입력창만 비우는데,
+            // 여기서 조합 상태를 안 버리면 다음 키에서 방금 보낸 마지막 글자가 되살아난다.
+            // 문서가 정말 비었는지 한 번 더 묻는다. 앞 문맥을 아예 안 주는 호스트에서는
+            // 글자가 남아 있으므로 그대로 믿고 간다. 조합 중에 nil 이 오는 일 자체가
+            // 드물어서 이 추가 왕복은 키 입력 경로에 거의 안 걸린다.
+            if !textDocumentProxy.hasText { finishComposing() }
+            return
+        }
         if !context.hasSuffix(preeditInDocument) {
             finishComposing()
         }
