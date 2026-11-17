@@ -27,6 +27,9 @@ final class KeyboardViewController: UIInputViewController {
     /// 올라올 때 한 번 받아 둔다. 권한은 설정 앱에서만 바뀌고 그러면 키보드가 다시 뜬다.
     private var fullAccessGranted = false
 
+    /// 눌렸지만 아직 문서에 반영하지 않은 키. `handle` 이 쌓고 `drainPending` 이 비운다.
+    private var pending: [KeyPress] = []
+
     // MARK: - 생명주기
 
     override func viewDidLoad() {
@@ -60,6 +63,22 @@ final class KeyboardViewController: UIInputViewController {
         fullAccessGranted = hasFullAccess
         // 햅틱 엔진을 미리 깨워 둔다. 안 하면 첫 진동이 눈에 띄게 늦다.
         if fullAccessGranted { feedback.prepare() }
+    }
+
+    override func viewDidAppear(_ animated: Bool) {
+        super.viewDidAppear(animated)
+        releaseEdgeTouchDelay()
+    }
+
+    /// 화면 가장자리 키가 늦게 눌리는 것을 푼다.
+    ///
+    /// 키보드 창에는 시스템이 화면 가장자리 쓸기(뒤로 가기, 제어 센터 등)를 가려내려고
+    /// 걸어 둔 제스처 인식기가 있다. 이 인식기들이 가장자리에서 시작한 터치를 쥐고 있다가
+    /// 쓸기가 아니라고 판단한 뒤에야 `touchesBegan` 을 넘겨준다. 그 사이 키는 눌린 표시도
+    /// 못 내고 입력도 못 한다. 나랏글은 ㄱ·ㄹ·ㅅ·획 과 ⌫·간격·↵ 가 전부 가장자리 열이라
+    /// 이 지연을 그대로 맞는다. 터치를 붙잡지 않게만 바꾼다. 쓸기 인식 자체는 그대로 돈다.
+    private func releaseEdgeTouchDelay() {
+        view.window?.gestureRecognizers?.forEach { $0.delaysTouchesBegan = false }
     }
 
     override func viewWillDisappear(_ animated: Bool) {
@@ -147,13 +166,25 @@ final class KeyboardViewController: UIInputViewController {
         // 여기서 바로 하면 키의 눌린 색이 그 뒤에야 그려져서 손가락보다 한 박자 늦게
         // 반응하는 것처럼 보인다. 눌린 색이 들어간 화면 갱신이 먼저 나가고 나서 하도록
         // 이번 트랜잭션이 끝난 직후로 미룬다. 추가 프레임을 기다리지는 않는다.
+        //
+        // 완료 블록에 키를 직접 물리지 않고 줄에 세운다. 호스트가 바빠 메인 스레드가
+        // 막혀 있던 동안 밀린 터치는 한 트랜잭션 안에 몰아서 들어오는데,
+        // 완료 블록은 트랜잭션에 하나뿐이라 나중 것이 앞의 것을 덮어쓴다.
+        // 키를 블록에 실어 두면 그때 앞의 키가 사라진다.
+        pending.append(press)
         CATransaction.setCompletionBlock { [weak self] in
-            self?.dispatch(press.action)
+            self?.drainPending()
         }
     }
 
-    private func dispatch(_ action: KeyAction) {
-        switch action {
+    private func drainPending() {
+        while !pending.isEmpty {
+            dispatch(pending.removeFirst())
+        }
+    }
+
+    private func dispatch(_ press: KeyPress) {
+        switch press.action {
         case .hangul(let key):
             run(key)
 
@@ -164,7 +195,8 @@ final class KeyboardViewController: UIInputViewController {
             run(.cycle(options))
 
         case .backspace:
-            run(.backspace)
+            // 한 번 누르면 자모 하나, 꾹 누르면 글자 하나씩.
+            if press.isRepeat { deleteWholeCharacter() } else { run(.backspace) }
 
         case .space:
             run(.space)
@@ -198,6 +230,23 @@ final class KeyboardViewController: UIInputViewController {
         apply(engine.handle(key, contextBefore: contextBeforeCursor(context)))
     }
 
+    /// 꾹 눌러 반복되는 삭제. 자모 단위로 풀지 않고 글자를 통째로 지운다.
+    ///
+    /// 반복 중에도 자모 단위로 지우면 글자 하나에 두세 박자가 들고, 그때마다
+    /// 앞 글자를 지웠다가 덜 지운 모양으로 다시 넣느라 호스트 호출도 두 배가 된다.
+    private func deleteWholeCharacter() {
+        var count = 1
+        if !preeditInDocument.isEmpty {
+            // 조합 중이던 글자가 아직 커서 앞에 있는지 확인하고, 있으면 그 글자를 지운다.
+            syncWithDocument(textDocumentProxy.documentContextBeforeInput)
+            count = max(1, preeditInDocument.count)
+        }
+        finishComposing()
+        for _ in 0 ..< count {
+            textDocumentProxy.deleteBackward()
+        }
+    }
+
     /// 키 눌림 피드백.
     ///
     /// 소리는 권한 없이도 나지만 햅틱은 전체 접근 권한이 있어야 한다.
@@ -214,31 +263,20 @@ final class KeyboardViewController: UIInputViewController {
     /// 엔진 결과를 문서에 반영한다.
     ///
     /// iOS 에는 안드로이드 IME 같은 preedit API 가 없다.
-    /// 조합 중인 글자를 직접 넣었다가 지우고 다시 넣는 식으로 흉내 낸다.
+    /// 조합 중인 글자를 직접 넣어 두고, 바뀌면 지우고 다시 넣는 식으로 흉내 낸다.
     private func apply(_ output: KeyOutput) {
         let proxy = textDocumentProxy
 
-        // 1. 문서에 남아 있는 이전 조합 글자를 지운다
-        if !preeditInDocument.isEmpty {
-            proxy.deleteBackward()
-            preeditInDocument = ""
-        }
-
-        // 2. 엔진이 요구한 만큼 확정된 글자를 지운다
-        for _ in 0 ..< output.deleteCommitted {
+        // 호스트에 보내는 호출은 하나하나가 프로세스를 건너간다. 꼭 필요한 만큼만 보낸다.
+        // 무엇을 지우고 넣을지는 `KeyOutput.edit` 이 정한다.
+        let edit = output.edit(replacing: preeditInDocument)
+        for _ in 0 ..< edit.deleteCount {
             proxy.deleteBackward()
         }
-
-        // 3. 확정된 글자를 넣는다
-        if !output.commit.isEmpty {
-            proxy.insertText(output.commit)
+        for text in edit.inserts {
+            proxy.insertText(text)
         }
-
-        // 4. 새 조합 글자를 넣는다
-        if !output.preedit.isEmpty {
-            proxy.insertText(output.preedit)
-            preeditInDocument = output.preedit
-        }
+        preeditInDocument = output.preedit
     }
 
     /// 조합 중인 글자가 아직 커서 바로 앞에 있는지 확인한다.

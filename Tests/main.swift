@@ -5,6 +5,8 @@ final class FakeDocument {
     private(set) var text = ""
     private var preedit = ""
     private let engine = NaratgeulEngine()
+    /// 지금까지 문서에 보낸 호출 수 (지우기 + 넣기)
+    private(set) var operations = 0
 
     func press(_ keys: [NaratgeulKey]) {
         for key in keys { press(key) }
@@ -14,10 +16,11 @@ final class FakeDocument {
         let context = preedit.isEmpty ? text : String(text.dropLast(preedit.count))
         let out = engine.handle(key, contextBefore: context.isEmpty ? nil : context)
 
-        if !preedit.isEmpty { text.removeLast(); preedit = "" }
-        for _ in 0 ..< out.deleteCommitted where !text.isEmpty { text.removeLast() }
-        text += out.commit
-        if !out.preedit.isEmpty { text += out.preedit; preedit = out.preedit }
+        let edit = out.edit(replacing: preedit)
+        for _ in 0 ..< edit.deleteCount where !text.isEmpty { text.removeLast() }
+        for piece in edit.inserts { text += piece }
+        preedit = out.preedit
+        operations += edit.operationCount
     }
 }
 
@@ -177,6 +180,31 @@ if sweepFailures > 0 {
 } else {
     print("한글 11172자 전부 확인")
 }
+
+print("\n── 문서 호출 수 ──")
+/// 키 하나가 호스트에 보내는 호출 수. 앞의 키들로 상태를 만든 뒤 마지막 키만 잰다.
+func checkOps(_ name: String, _ keys: [NaratgeulKey], _ expectedText: String, ops expected: Int) {
+    let doc = FakeDocument()
+    doc.press(Array(keys.dropLast()))
+    let before = doc.operations
+    doc.press(keys.last!)
+    let used = doc.operations - before
+    let ok = doc.text == expectedText && used == expected
+    if !ok { failures += 1 }
+    print("\(ok ? "✅" : "❌") \(name): \"\(doc.text)\" \(used)회\(ok ? "" : "  (기대: \"\(expectedText)\" \(expected)회)")")
+}
+checkOps("첫 자음은 넣기 1회", [G], "ㄱ", ops: 1)
+checkOps("가 → 각 은 지우고 넣기 2회", [G, AEO, G], "각", ops: 2)
+checkOps("간 뒤 간격은 넣기 1회", [G, AEO, N, SP], "간 ", ops: 1)
+checkOps("간 뒤 줄바꿈은 넣기 1회", [G, AEO, N, .newline], "간\n", ops: 1)
+checkOps("간 뒤 기호는 넣기 1회", [G, AEO, N, .literal("!")], "간!", ops: 1)
+checkOps("ㄱ 뒤 ㄴ 은 넣기 1회", [G, N], "ㄱㄴ", ops: 1)
+checkOps("값 뒤 ㄱ 은 넣기 1회", [G, AEO, M, ST, S, G], "값ㄱ", ops: 1)
+checkOps("간 + ㅏ → 가나 는 지우고 한 번에 넣기 2회", [G, AEO, N, AEO], "가나", ops: 2)
+checkOps("더 올릴 획이 없으면 0회", [R, ST], "ㄹ", ops: 0)
+checkOps("조합 중 지우기 가 → ㄱ 은 2회", [G, AEO, BS], "ㄱ", ops: 2)
+checkOps("조합 중 지우기 ㄱ → 빈 문서 는 1회", [G, BS], "", ops: 1)
+checkOps("확정 글자 되살려 지우기는 2회", [G, AEO, SP, BS, BS], "ㄱ", ops: 2)
 
 print("\n실패 \(failures)건")
 exit(failures == 0 ? 0 : 1)
