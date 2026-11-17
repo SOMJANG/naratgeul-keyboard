@@ -26,7 +26,9 @@ struct KeyboardRootView: View {
         VStack(spacing: 0) {
             tabBar
 
-            VStack(spacing: KeyboardTheme.rowGap) {
+            // 행 사이 틈은 키가 안쪽 여백으로 갖고 있다 (`KeyButton`). 여기서는 붙여 쌓고,
+            // 맨 위·아래 키가 가진 여백만큼 바깥 여백을 덜어 낸다.
+            VStack(spacing: 0) {
                 switch layer {
                 case .hangul: hangulLayer
                 case .english: englishLayer
@@ -37,8 +39,8 @@ struct KeyboardRootView: View {
             }
             .frame(maxHeight: .infinity)
             .padding(.horizontal, KeyboardTheme.sidePadding)
-            .padding(.top, 9)
-            .padding(.bottom, 12)
+            .padding(.top, 9 - KeyboardTheme.rowGap / 2)
+            .padding(.bottom, 12 - KeyboardTheme.rowGap / 2)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         // iOS 26 은 키보드를 모서리가 둥근 판 위에 얹어 준다.
@@ -198,7 +200,7 @@ struct KeyboardRootView: View {
                 ForEach(KeyboardLayout.hangulBottomRow) { key in
                     KeyButton(definition: key, onPress: perform)
                 }
-                HStack(spacing: KeyboardTheme.keyGap) {
+                HStack(spacing: 0) {
                     KeyButton(
                         definition: KeyDefinition(
                             label: "123", style: .function, fontSize: 14,
@@ -250,6 +252,7 @@ struct KeyboardRootView: View {
                         )
                     }
                 }
+                .environment(\.keyGap, 5)
             }
             bottomUtilityRow
         }
@@ -293,7 +296,7 @@ struct KeyboardRootView: View {
     private func splitSlot(
         _ left: KeyDefinition, _ right: KeyDefinition, ratio: CGFloat
     ) -> some View {
-        HStack(spacing: KeyboardTheme.keyGap) {
+        HStack(spacing: 0) {
             KeyButton(definition: left, onPress: perform)
             KeyButton(definition: right, onPress: perform)
         }
@@ -324,8 +327,10 @@ struct KeyboardRootView: View {
                 }
             }
             .frame(maxHeight: .infinity)
+            // 다른 레이어에서는 키가 갖고 있는 위아래 여백. 여기는 키가 아니라서 직접 준다.
+            .padding(.vertical, KeyboardTheme.rowGap / 2)
 
-            HStack(spacing: KeyboardTheme.keyGap) {
+            HStack(spacing: 0) {
                 KeyButton(
                     definition: KeyDefinition(
                         label: "한글", style: .function, fontSize: 15,
@@ -346,13 +351,14 @@ struct KeyboardRootView: View {
                 )
                 globeKey()
             }
-            .frame(height: KeyboardTheme.keyHeight)
+            .padding(.horizontal, -KeyboardTheme.keyGap / 2)
+            .frame(height: KeyboardTheme.keyHeight + KeyboardTheme.rowGap)
         }
     }
 
     /// 영문 레이어 하단 행.
     private var bottomUtilityRow: some View {
-        HStack(spacing: KeyboardTheme.keyGap) {
+        HStack(spacing: 0) {
             KeyButton(
                 definition: KeyDefinition(
                     label: "한글", style: .function, fontSize: 15,
@@ -371,6 +377,7 @@ struct KeyboardRootView: View {
             )
             globeKey()
         }
+        .padding(.horizontal, -KeyboardTheme.keyGap / 2)
     }
 
     /// 지구본 키.
