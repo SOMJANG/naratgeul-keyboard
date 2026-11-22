@@ -12,6 +12,52 @@ struct KeyOutput: Equatable {
     var preedit: String = ""
 }
 
+/// 문서에 실제로 보낼 편집. 커서 앞에서 `deleteCount` 글자를 지우고 `inserts` 를 차례로 넣는다.
+struct DocumentEdit: Equatable {
+    var deleteCount = 0
+    var inserts: [String] = []
+
+    /// 호스트에 보내는 호출 수.
+    var operationCount: Int { deleteCount + inserts.count }
+}
+
+extension KeyOutput {
+    /// 문서에 `oldPreedit` 이 조합 글자로 들어가 있을 때, 이 결과를 반영하는 가장 짧은 편집.
+    ///
+    /// 조합 글자를 무조건 지웠다가 다시 넣으면 결과가 같아도 호스트에 호출이 두세 번 간다.
+    /// 호출 하나하나가 프로세스를 건너가고 호스트가 그때마다 화면을 다시 그리므로,
+    /// 이미 들어가 있는 글자가 그대로 확정되는 경우(간격·줄바꿈·기호, 자음이 새 글자로
+    /// 넘어가는 경우)에는 지우지 않고 뒤에 붙을 것만 넣는다.
+    func edit(replacing oldPreedit: String) -> DocumentEdit {
+        var edit = DocumentEdit()
+        var commit = Substring(self.commit)
+
+        if deleteCommitted == 0, !oldPreedit.isEmpty {
+            if commit.isEmpty, preedit == oldPreedit {
+                // 아무것도 안 바뀌었다 (더 올릴 획이 없는 글자에 획을 누른 경우 등)
+                return edit
+            }
+            // `hasPrefix` 가 아니라 글자 단위로 견준다. "간" 이 "가" 로 시작한다고 보면 안 된다.
+            if commit.starts(with: oldPreedit) {
+                commit = commit.dropFirst(oldPreedit.count)
+            } else {
+                edit.deleteCount = oldPreedit.count
+            }
+        } else {
+            edit.deleteCount = oldPreedit.count + deleteCommitted
+        }
+
+        // 줄바꿈은 따로 보낸다. 한 줄짜리 입력창은 "\n" 하나만 왔을 때 리턴 키로 알아듣는다.
+        if !commit.isEmpty, !preedit.isEmpty, !commit.contains("\n") {
+            edit.inserts.append(commit + preedit)
+        } else {
+            if !commit.isEmpty { edit.inserts.append(String(commit)) }
+            if !preedit.isEmpty { edit.inserts.append(preedit) }
+        }
+        return edit
+    }
+}
+
 /// 나랏글 입력 방식의 키.
 enum NaratgeulKey: Equatable {
     /// 자음 키 (ㄱ ㄴ ㄹ ㅁ ㅅ ㅇ)
