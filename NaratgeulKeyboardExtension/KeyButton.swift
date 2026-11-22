@@ -247,20 +247,36 @@ private struct KeyTouchArea: UIViewRepresentable {
         private var activeTouches = 0
 
         override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent?) {
-            for _ in touches {
+            for touch in touches {
+                record("Touch down", touch)
                 activeTouches += 1
                 onDown()
             }
         }
 
         override func touchesEnded(_ touches: Set<UITouch>, with event: UIEvent?) {
+            touches.forEach { record("Touch up", $0) }
             lift(touches.count)
         }
 
         /// 시스템이 터치를 가져가는 경우 (전화 수신, 키보드 내려감 등).
         /// 여기서 안 풀면 눌린 표시와 반복 입력이 그대로 남는다.
         override func touchesCancelled(_ touches: Set<UITouch>, with event: UIEvent?) {
+            touches.forEach { record("Touch cancel", $0) }
             lift(touches.count)
+        }
+
+        /// 손가락이 실제로 닿거나 떨어진 시각부터 이 뷰에 전달되기까지 걸린 시간을 남긴다.
+        ///
+        /// `UITouch.timestamp` 와 `CACurrentMediaTime()` 은 둘 다 부팅 후 경과 시간이라 바로 뺄 수 있다.
+        /// 가장자리 열(x 가 작거나 큰 쪽)만 늦으면 창의 제스처 인식기가 붙잡고 있는 것이다.
+        private func record(_ name: StaticString, _ touch: UITouch) {
+            let delay = (CACurrentMediaTime() - touch.timestamp) * 1000
+            let x = touch.location(in: nil).x
+            KeyboardPerf.signposter.emitEvent(
+                name,
+                "delay=\(delay, format: .fixed(precision: 1))ms x=\(Int(x)) taps=\(touch.tapCount)"
+            )
         }
 
         /// 마지막 손가락이 떨어졌을 때만 눌림을 푼다.
