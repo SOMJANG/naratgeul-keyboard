@@ -380,22 +380,21 @@ final class KeyboardViewController: UIInputViewController {
     /// 더 이상 커서 앞에 없다. 그대로 두면 다음 키 입력 때
     /// 엉뚱한 글자를 지우게 된다. 어긋났으면 조합을 버리고 새로 시작한다.
     private func syncWithDocument(_ context: String?) {
-        guard !preeditInDocument.isEmpty else { return }
-        guard let context else {
-            // 커서 앞에 글자가 없으면 빈 문자열이 아니라 nil 이 온다.
-            // 호스트가 우리 모르게 문서를 비웠을 때가 바로 이 경우다.
-            // 카톡은 전송 버튼을 누르면 키보드를 내리지 않고 입력창만 비우는데,
-            // 여기서 조합 상태를 안 버리면 다음 키에서 방금 보낸 마지막 글자가 되살아난다.
-            // 문서가 정말 비었는지 한 번 더 묻는다. 앞 문맥을 아예 안 주는 호스트에서는
-            // 글자가 남아 있으므로 그대로 믿고 간다. 조합 중에 nil 이 오는 일 자체가
-            // 드물어서 이 추가 왕복은 키 입력 경로에 거의 안 걸린다.
-            let hasText = signposter.withIntervalSignpost("Has text") { textDocumentProxy.hasText }
-            if !hasText { finishComposing() }
-            return
-        }
-        if !context.hasSuffix(preeditInDocument) {
-            finishComposing()
-        }
+        // 커서 앞에 글자가 없으면 빈 문자열이 아니라 nil 이 온다. 조합 중에 이렇게 되는 건
+        // 호스트가 입력창을 비웠거나(카톡 전송) 사용자가 커서를 맨 앞으로 옮긴 경우다.
+        // 그때만 호스트에 한두 번 더 묻는다. 조합 중에 nil 이 오는 일 자체가 드물어서
+        // 이 추가 왕복은 키 입력 경로에 거의 안 걸린다.
+        let proxy = textDocumentProxy
+        let signposter = signposter
+        let shouldFinish = PreeditSync.shouldFinishComposing(
+            preedit: preeditInDocument,
+            contextBefore: context,
+            hasText: { signposter.withIntervalSignpost("Has text") { proxy.hasText } },
+            contextAfter: {
+                signposter.withIntervalSignpost("Context after") { proxy.documentContextAfterInput }
+            }
+        )
+        if shouldFinish { finishComposing() }
     }
 
     /// 커서 앞 텍스트. 보안 입력 필드에서는 빈 문자열이 올 수 있다.

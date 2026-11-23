@@ -58,6 +58,37 @@ extension KeyOutput {
     }
 }
 
+/// 문서에 넣어 둔 조합 글자가 아직 커서 바로 앞에 있는지 판단한다.
+///
+/// 키보드는 커서 이동을 따로 듣지 않고 키를 처리하기 직전에 이것으로 확인한다.
+/// 호스트에 묻는 값은 필요할 때만 읽도록 클로저로 받는다. 하나하나가 프로세스 왕복이다.
+enum PreeditSync {
+    /// - Parameters:
+    ///   - preedit: 문서에 넣어 둔 조합 글자
+    ///   - contextBefore: 커서 앞 텍스트. 커서 앞에 글자가 없으면 `nil`
+    ///   - hasText: 문서에 글자가 하나라도 있는지
+    ///   - contextAfter: 커서 뒤 텍스트
+    /// - Returns: 조합을 버리고 새로 시작해야 하면 `true`
+    static func shouldFinishComposing(
+        preedit: String,
+        contextBefore: String?,
+        hasText: () -> Bool,
+        contextAfter: () -> String?
+    ) -> Bool {
+        guard !preedit.isEmpty else { return false }
+        if let contextBefore { return !contextBefore.hasSuffix(preedit) }
+
+        // 커서 앞이 비었다. 조합 글자가 커서 앞에 있다면 이럴 수 없다.
+        // - 문서가 통째로 비었다: 카톡처럼 호스트가 입력창을 비운 경우
+        if !hasText() { return true }
+        // - 커서 뒤에 글자가 있다: 사용자가 커서를 입력창 맨 앞으로 옮긴 경우.
+        //   "천" 을 쓰고 맨 앞으로 가서 "인" 을 치면 "천인천" 이 되던 문제가 이것이다.
+        if let after = contextAfter(), !after.isEmpty { return true }
+        // 앞뒤 문맥을 아예 안 주는 호스트. 글자는 남아 있으니 그대로 믿고 간다.
+        return false
+    }
+}
+
 /// 나랏글 입력 방식의 키.
 enum NaratgeulKey: Equatable {
     /// 자음 키 (ㄱ ㄴ ㄹ ㅁ ㅅ ㅇ)
@@ -343,6 +374,8 @@ final class NaratgeulEngine {
                 jong = next
             } else if let combined = strokeCompoundJong(current) {
                 jong = combined
+            } else {
+                splitJongForStroke(current)
             }
             return 0
         }
@@ -385,6 +418,12 @@ final class NaratgeulEngine {
                     next = plain
                 } else if let combined = strokeCompoundJong(jongChar) {
                     next = combined
+                } else if Self.splitJong[jongChar] != nil {
+                    cho = parts.cho
+                    jung = parts.jung
+                    vowelSeq = [parts.jung]
+                    splitJongForStroke(jongChar)
+                    return 1
                 } else {
                     return 0
                 }
@@ -426,6 +465,21 @@ final class NaratgeulEngine {
               let next = Self.stroke[second]
         else { return nil }
         return Self.compoundJong["\(first)+\(next)"]
+    }
+
+    /// 겹받침에 획을 더한 결과가 겹받침이 아니면, 뒤쪽 자음을 다음 글자의 초성으로 내려보낸다.
+    ///
+    /// "안" 뒤에 ㅅ·획을 누르면 "앉" 이 되는데, 여기서 획을 한 번 더 눌러 ㅊ 을 만들면
+    /// ㄴ+ㅊ 은 겹받침이 아니다. 이때 획을 버리면 "인천" 이 "인전" 이 된다.
+    /// ㄳ·ㅄ 처럼 자음을 누르는 순간 붙어 버리는 겹받침도 마찬가지다 ("업적", "곡창").
+    /// 획을 다시 누르면 초성 쪽 규칙이 앞 받침과 겹받침을 다시 맞춰 보므로 순환이 끊기지 않는다.
+    private func splitJongForStroke(_ compound: Character) {
+        guard let (first, second) = Self.splitJong[compound],
+              let next = Self.stroke[second]
+        else { return }
+        jong = first
+        flush()
+        cho = next
     }
 
     /// 쌍 키. 방금 낸 자음을 된소리로 바꾼다.
