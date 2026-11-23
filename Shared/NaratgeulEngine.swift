@@ -63,19 +63,33 @@ extension KeyOutput {
 /// 키보드는 커서 이동을 따로 듣지 않고 키를 처리하기 직전에 이것으로 확인한다.
 /// 호스트에 묻는 값은 필요할 때만 읽도록 클로저로 받는다. 하나하나가 프로세스 왕복이다.
 enum PreeditSync {
+    /// 이만큼 쉬었다가 누른 키는 새 글자로 시작한다.
+    ///
+    /// 카톡처럼 `replace` 로 입력창을 비우는 호스트는 키보드에 아무것도 알려 주지 않고,
+    /// 문서 문맥도 보낸 글자가 남은 옛 값 그대로 준다. 그러면 보낸 메시지의 마지막 글자에
+    /// 다음 메시지 첫 키가 붙는다("나" 를 보내고 ㄱ → "낙"). 키보드 쪽에서는 이걸
+    /// 알아챌 길이 없어서, 메시지를 보내고 다음 메시지를 치기까지 걸리는 틈을 근거로 끊는다.
+    ///
+    /// 대가로 한 글자를 치다 이만큼 멈추면 그 글자에 받침·모음·쌍을 더 얹지 못한다.
+    /// 획은 확정된 앞 글자에도 먹으므로 그대로 된다.
+    static let idleLimit: TimeInterval = 2
+
     /// - Parameters:
     ///   - preedit: 문서에 넣어 둔 조합 글자
+    ///   - idle: 직전 키 이후 지난 시간. 첫 키면 `nil`
     ///   - contextBefore: 커서 앞 텍스트. 커서 앞에 글자가 없으면 `nil`
     ///   - hasText: 문서에 글자가 하나라도 있는지
     ///   - contextAfter: 커서 뒤 텍스트
     /// - Returns: 조합을 버리고 새로 시작해야 하면 `true`
     static func shouldFinishComposing(
         preedit: String,
+        idle: TimeInterval? = nil,
         contextBefore: String?,
         hasText: () -> Bool,
         contextAfter: () -> String?
     ) -> Bool {
         guard !preedit.isEmpty else { return false }
+        if let idle, idle >= idleLimit { return true }
         if let contextBefore { return !contextBefore.hasSuffix(preedit) }
 
         // 커서 앞이 비었다. 조합 글자가 커서 앞에 있다면 이럴 수 없다.

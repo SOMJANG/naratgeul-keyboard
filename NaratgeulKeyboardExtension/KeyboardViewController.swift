@@ -54,6 +54,9 @@ final class KeyboardViewController: UIInputViewController {
     /// 문서에 마지막으로 써 넣은 조합 중인 글자. 항상 0자 또는 1자.
     private var preeditInDocument = ""
 
+    /// 직전 키를 처리한 시각. 쉬었다 누른 키인지 가르는 데 쓴다. `PreeditSync.idleLimit` 참고.
+    private var lastKeyTime: CFTimeInterval?
+
     private var hostingController: UIHostingController<KeyboardRootView>?
     private var heightConstraint: NSLayoutConstraint?
 
@@ -303,6 +306,7 @@ final class KeyboardViewController: UIInputViewController {
             finishComposing()
             advanceToNextInputMode()
         }
+        lastKeyTime = CACurrentMediaTime()
     }
 
     /// 엔진에 키를 넘기고 결과를 문서에 반영한다.
@@ -388,6 +392,7 @@ final class KeyboardViewController: UIInputViewController {
         let signposter = signposter
         let shouldFinish = PreeditSync.shouldFinishComposing(
             preedit: preeditInDocument,
+            idle: lastKeyTime.map { CACurrentMediaTime() - $0 },
             contextBefore: context,
             hasText: { signposter.withIntervalSignpost("Has text") { proxy.hasText } },
             contextAfter: {
