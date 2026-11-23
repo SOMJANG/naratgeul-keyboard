@@ -145,6 +145,37 @@ check("삶 (ㄻ 은 그대로)", [S, AEO, R, M], "삶")
 check("넓다", [N, AEO, AEO, R, M, ST, N, ST, AEO], "넓다")
 check("확정된 글자에도 먹는다", [S, AEO, R, M, SP, BS, ST], "삷")
 
+print("\n── 겹받침에 획을 더해 겹받침이 안 되면 뒤 자음이 넘어간다 ──")
+// 앱스토어 리뷰: "인천" 을 치면 "인전" 이 됐다. ㄵ 에 획을 더한 ㄴ+ㅊ 이 겹받침이 아니라 획이 버려졌다.
+check("인천", [O, I, N, S, ST, ST, AEO, AEO, N], "인천")
+check("진천", [S, ST, I, N, S, ST, ST, AEO, AEO, N], "진천")
+check("천인천", [S, ST, ST, AEO, AEO, N, O, I, N, S, ST, ST, AEO, AEO, N], "천인천")
+check("안차", [O, AEO, N, S, ST, ST, AEO], "안차")
+check("업적 (ㅄ + 획)", [O, AEO, AEO, M, ST, S, ST, AEO, AEO, G], "업적")
+check("업체 (ㅄ + 획 두 번)", [O, AEO, AEO, M, ST, S, ST, ST, AEO, AEO, I], "업체")
+check("곡창 (ㄳ + 획 두 번)", [G, OU, G, S, ST, ST, AEO, O], "곡창")
+check("일주 (ㄽ + 획)", [O, I, R, S, ST, OU, OU], "일주")
+check("획 순환이 끊기지 않는다 (ㅊ→ㅅ)", [O, AEO, N, S, ST, ST, ST], "안ㅅ")
+check("획 순환이 끊기지 않는다 (다시 앉)", [O, AEO, N, S, ST, ST, ST, ST], "앉")
+check("확정된 겹받침에도 먹는다", [O, AEO, N, S, ST, SP, BS, ST], "안ㅊ")
+check("앉아 는 그대로", [O, AEO, N, S, ST, O, AEO], "앉아")
+
+print("\n── 커서 위치 확인 ──")
+func checkSync(_ name: String, preedit: String, before: String?, hasText: Bool, after: String?, _ expected: Bool) {
+    let got = PreeditSync.shouldFinishComposing(
+        preedit: preedit, contextBefore: before, hasText: { hasText }, contextAfter: { after }
+    )
+    let ok = got == expected
+    if !ok { failures += 1 }
+    print("\(ok ? "✅" : "❌") \(name): \(got ? "조합 종료" : "유지")")
+}
+checkSync("조합 글자가 커서 앞에 있으면 유지", preedit: "천", before: "인천", hasText: true, after: nil, false)
+checkSync("커서를 다른 곳으로 옮기면 종료", preedit: "천", before: "가 ", hasText: true, after: "천", true)
+checkSync("호스트가 입력창을 비우면 종료", preedit: "천", before: nil, hasText: false, after: nil, true)
+checkSync("커서를 맨 앞으로 옮기면 종료", preedit: "천", before: nil, hasText: true, after: "천", true)
+checkSync("문맥을 안 주는 호스트는 유지", preedit: "천", before: nil, hasText: true, after: nil, false)
+checkSync("조합 중이 아니면 묻지 않는다", preedit: "", before: nil, hasText: false, after: nil, false)
+
 print("\n── 키 순서 되짚기 ──")
 // KeySequence 는 엔진 규칙을 손으로 뒤집어 놓은 표라서 조용히 어긋날 수 있다.
 // 여기서 내놓은 순서를 다시 엔진에 넣어 원래 글자가 나오는지 확인한다.
