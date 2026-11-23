@@ -161,9 +161,9 @@ check("확정된 겹받침에도 먹는다", [O, AEO, N, S, ST, SP, BS, ST], "�
 check("앉아 는 그대로", [O, AEO, N, S, ST, O, AEO], "앉아")
 
 print("\n── 커서 위치 확인 ──")
-func checkSync(_ name: String, preedit: String, before: String?, hasText: Bool, after: String?, _ expected: Bool) {
+func checkSync(_ name: String, preedit: String, idle: TimeInterval? = nil, before: String?, hasText: Bool, after: String?, _ expected: Bool) {
     let got = PreeditSync.shouldFinishComposing(
-        preedit: preedit, contextBefore: before, hasText: { hasText }, contextAfter: { after }
+        preedit: preedit, idle: idle, contextBefore: before, hasText: { hasText }, contextAfter: { after }
     )
     let ok = got == expected
     if !ok { failures += 1 }
@@ -175,6 +175,11 @@ checkSync("호스트가 입력창을 비우면 종료", preedit: "천", before: 
 checkSync("커서를 맨 앞으로 옮기면 종료", preedit: "천", before: nil, hasText: true, after: "천", true)
 checkSync("문맥을 안 주는 호스트는 유지", preedit: "천", before: nil, hasText: true, after: nil, false)
 checkSync("조합 중이 아니면 묻지 않는다", preedit: "", before: nil, hasText: false, after: nil, false)
+// 카톡: 입력창을 비웠는데 문맥은 보낸 글자가 남은 옛 값 그대로 온다
+checkSync("2초 쉬었다 누르면 종료 (카톡 비움)", preedit: "나", idle: 2.0, before: "나", hasText: true, after: nil, true)
+checkSync("이어 치는 중이면 유지", preedit: "나", idle: 1.9, before: "나", hasText: true, after: nil, false)
+checkSync("첫 키면 시간으로 끊지 않는다", preedit: "나", idle: nil, before: "나", hasText: true, after: nil, false)
+checkSync("조합 중이 아니면 오래 쉬어도 그대로", preedit: "", idle: 10, before: "나", hasText: true, after: nil, false)
 
 print("\n── 키 순서 되짚기 ──")
 // KeySequence 는 엔진 규칙을 손으로 뒤집어 놓은 표라서 조용히 어긋날 수 있다.
